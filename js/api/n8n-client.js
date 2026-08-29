@@ -1,18 +1,12 @@
 /* ==========================================================================
    MEDICLIN N8N API CLIENT (N8N-CLIENT.JS)
-   Centralized bi-directional webhook gateway for AI Medical Triage
+   Centralized bi-directional webhook gateway for AI Medical Triage & Planning
+   Configured to use the centralized n8n TEST Webhook Endpoint
    ========================================================================== */
 
-export const N8N_ENDPOINTS = {
-  test: 'https://aryanna.app.n8n.cloud/webhook-test/a5b3b9e3-267f-406f-a37b-aabeff9b50d0',
-  production: 'https://aryanna.app.n8n.cloud/webhook/a5b3b9e3-267f-406f-a37b-aabeff9b50d0'
-};
+export const N8N_TEST_WEBHOOK_URL = 'https://aryanna.app.n8n.cloud/webhook-test/a5b3b9e3-267f-406f-a37b-aabeff9b50d0';
+export const N8N_WEBHOOK_URL = N8N_TEST_WEBHOOK_URL;
 
-export const N8N_PRODUCTION_WEBHOOK_URL = N8N_ENDPOINTS.production;
-export const N8N_TEST_WEBHOOK_URL = N8N_ENDPOINTS.test;
-
-const STORAGE_KEY_WEBHOOK_URL = 'n8n_clinical_webhook_url';
-const STORAGE_KEY_N8N_MODE = 'mediclin_n8n_mode';
 const REQUEST_TIMEOUT_MS = 60000; // 60s for full LLM analysis & triage pipeline
 
 /**
@@ -54,257 +48,175 @@ export const SYNTHETIC_TEST_PATIENT = {
 };
 
 /**
- * Get active n8n mode ('production' | 'test')
- * Defaults strictly to 'production'
+ * Retrieve active webhook URL - strictly returns the centralized TEST URL
  */
-export function getConfiguredN8nMode() {
-  if (typeof localStorage === 'undefined') return 'production';
-  try {
-    const mode = localStorage.getItem(STORAGE_KEY_N8N_MODE);
-    return mode === 'test' ? 'test' : 'production';
-  } catch (e) {
-    return 'production';
-  }
-}
-
-export function getN8nMode() {
-  return getConfiguredN8nMode();
+export function getActiveWebhookUrl() {
+  return N8N_WEBHOOK_URL;
 }
 
 /**
- * Set active n8n mode ('production' | 'test')
+ * Sanitize string value
  */
-export function setN8nMode(mode) {
-  const cleanMode = mode === 'test' ? 'test' : 'production';
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(STORAGE_KEY_N8N_MODE, cleanMode);
-    } catch (e) {}
-  }
-  return cleanMode;
-}
-
-/**
- * Retrieve active webhook URL based on explicit mode
- * Default is always PRODUCTION URL
- */
-export function getActiveWebhookUrl(modeOverride) {
-  const mode = modeOverride || getConfiguredN8nMode();
-  if (mode === 'test') {
-    return N8N_ENDPOINTS.test;
-  }
-  return N8N_ENDPOINTS.production;
-}
-
-/**
- * Save active webhook URL to storage
- */
-export function setActiveWebhookUrl(url) {
-  const cleanUrl = (url && typeof url === 'string') ? url.trim() : N8N_ENDPOINTS.production;
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(STORAGE_KEY_WEBHOOK_URL, cleanUrl);
-      if (cleanUrl.includes('/webhook-test/')) {
-        localStorage.setItem(STORAGE_KEY_N8N_MODE, 'test');
-      } else if (cleanUrl.includes('/webhook/')) {
-        localStorage.setItem(STORAGE_KEY_N8N_MODE, 'production');
-      }
-    } catch (e) {}
-  }
-  return cleanUrl;
-}
-
-/**
- * Helper to safely sanitize input values and ensure no null/undefined values
- */
-function sanitizeValue(val, fallback = '') {
+export function sanitizeValue(val, fallback = '') {
   if (val === null || val === undefined) return fallback;
-  if (typeof val === 'string') return val.trim();
-  return val;
+  const str = String(val).trim();
+  return str.length > 0 ? str : fallback;
 }
 
 /**
- * Format raw clinical intake form data into canonical n8n payload matching Extract Patient Data node
- * Guarantees exactly 15 non-null fields matching the n8n Extract Patient Data contract.
+ * Formats patient intake form into the 15-field JSON payload expected by n8n
  */
-export function formatN8nPayload(formData) {
-  if (!formData || typeof formData !== 'object') formData = {};
+export function formatN8nPayload(rawFormData, customWorkflowType) {
+  let firstName = 'Patient';
+  let lastName = '';
+  const fullNameRaw = sanitizeValue(rawFormData.patient_name || rawFormData.name || (rawFormData.q3_fullName ? (typeof rawFormData.q3_fullName === 'object' ? `${rawFormData.q3_fullName.first} ${rawFormData.q3_fullName.last}` : rawFormData.q3_fullName) : ''));
+  if (fullNameRaw) {
+    const parts = fullNameRaw.split(' ');
+    firstName = parts[0] || 'Patient';
+    lastName = parts.slice(1).join(' ') || '';
+  }
 
-  const fullName = sanitizeValue(formData.patient_name, '').trim();
-  const nameParts = fullName.split(/\s+/).filter(Boolean);
-  const firstName = nameParts[0] || 'Patient';
-  const lastName = nameParts.slice(1).join(' ') || '';
+  const rawPhone = sanitizeValue(rawFormData.patient_phone || rawFormData.phone || rawFormData.q5_phone, '+1 (555) 000-0000');
+  const rawEmail = sanitizeValue(rawFormData.patient_email || rawFormData.email || rawFormData.q4_email, 'patient@example.org');
+  const rawDob = sanitizeValue(rawFormData.date_of_birth || rawFormData.dob || rawFormData.q6_dateOfBirth, '1985-01-01');
+  const rawReason = sanitizeValue(rawFormData.reason_for_visit || rawFormData.reason || rawFormData.q7_reasonForVisit, 'Clinical consultation');
 
-  const rawPain = parseInt(formData.pain_level, 10);
-  const painLevel = (isNaN(rawPain) || rawPain === null || rawPain === undefined) ? 0 : Math.max(0, Math.min(10, rawPain));
+  let rawSymptoms = sanitizeValue(rawFormData.symptoms || rawFormData.q8_symptoms, 'Standard clinical evaluation requested');
+  const hr = sanitizeValue(rawFormData.heart_rate);
+  const bp = sanitizeValue(rawFormData.blood_pressure);
+  const spo2 = sanitizeValue(rawFormData.oxygen_sat);
+  const temp = sanitizeValue(rawFormData.temperature);
+  if ((hr || bp || spo2 || temp) && !rawSymptoms.includes('[Vitals:')) {
+    const vitalsStr = ` [Vitals: HR: ${hr || 75} bpm, BP: ${bp || '120/80'} mmHg, SpO2: ${spo2 || 98}%, Temp: ${temp || 98.6}°F]`;
+    rawSymptoms += vitalsStr;
+  }
 
-  const rawId = sanitizeValue(formData.intake_id, '');
-  const cleanId = rawId || ('INT-' + Math.floor(100000 + Math.random() * 900000));
-  const submissionID = cleanId.replace(/^INT-/, '').replace(/^MED-/, '') || String(Date.now());
+  const rawDuration = sanitizeValue(rawFormData.symptom_duration || rawFormData.duration || rawFormData.q9_duration, '1 day');
+  let rawPain = rawFormData.pain_level !== undefined && rawFormData.pain_level !== null ? parseInt(rawFormData.pain_level, 10) : (rawFormData.q10_painLevel !== undefined ? parseInt(rawFormData.q10_painLevel, 10) : 5);
+  if (isNaN(rawPain)) rawPain = 5;
 
-  let symptomsText = sanitizeValue(formData.symptoms, '');
-  const vitalsList = [];
-  if (formData.heart_rate) vitalsList.push(`HR: ${sanitizeValue(formData.heart_rate)} bpm`);
-  if (formData.blood_pressure) vitalsList.push(`BP: ${sanitizeValue(formData.blood_pressure)} mmHg`);
-  if (formData.oxygen_sat) vitalsList.push(`SpO2: ${sanitizeValue(formData.oxygen_sat)}%`);
-  if (formData.temperature) vitalsList.push(`Temp: ${sanitizeValue(formData.temperature)}°F`);
+  const rawMeds = sanitizeValue(rawFormData.current_medications || rawFormData.medications || rawFormData.q11_medications, 'None reported');
+  const rawAllergies = sanitizeValue(rawFormData.allergies || rawFormData.q12_allergies, 'NKDA');
+  const rawHistory = sanitizeValue(rawFormData.medical_history || rawFormData.history || rawFormData.q13_medicalHistory, 'None documented');
+  const rawInsurance = sanitizeValue(rawFormData.insurance_provider || rawFormData.insurance || rawFormData.q14_insurance, 'Self-Pay / Standard Insurance');
 
-  if (vitalsList.length > 0 && !symptomsText.includes('bpm') && !symptomsText.includes('mmHg')) {
-    symptomsText = symptomsText ? `${symptomsText} [Vitals: ${vitalsList.join(', ')}]` : `Vitals: ${vitalsList.join(', ')}`;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const rawDate = sanitizeValue(rawFormData.preferred_date || rawFormData.date || rawFormData.q15_preferredDate, todayStr);
+  const rawTime = sanitizeValue(rawFormData.preferred_time || rawFormData.time || rawFormData.q16_preferredTime, '09:00 AM');
+
+  let subId = sanitizeValue(rawFormData.intake_id || rawFormData.submissionID || rawFormData.submission_id);
+  if (!subId) {
+    subId = String(Math.floor(100000 + Math.random() * 900000));
+  } else {
+    subId = subId.replace(/^INT-/, '');
   }
 
   const payload = {
     q3_fullName: {
-      first: firstName || 'Patient',
-      last: lastName || ''
+      first: firstName,
+      last: lastName
     },
-    q4_email: sanitizeValue(formData.patient_email, 'patient@example.com'),
-    q5_phone: sanitizeValue(formData.patient_phone, 'N/A'),
-    q6_dateOfBirth: sanitizeValue(formData.date_of_birth, '1980-01-01'),
-    q7_reasonForVisit: sanitizeValue(formData.reason_for_visit, 'Medical evaluation'),
-    q8_symptoms: symptomsText || 'No specific symptoms described.',
-    q9_duration: sanitizeValue(formData.symptom_duration, 'Not specified'),
-    q10_painLevel: painLevel,
-    q11_medications: sanitizeValue(formData.current_medications, 'None') || 'None',
-    q12_allergies: sanitizeValue(formData.allergies, 'None') || 'None',
-    q13_medicalHistory: sanitizeValue(formData.medical_history, 'None reported') || 'None reported',
-    q14_insurance: sanitizeValue(formData.insurance_provider, 'Self-pay') || 'Self-pay',
-    q15_preferredDate: sanitizeValue(formData.preferred_date, new Date().toISOString().split('T')[0]),
-    q16_preferredTime: sanitizeValue(formData.preferred_time, 'Immediate'),
-    submissionID: submissionID
+    q4_email: rawEmail,
+    q5_phone: rawPhone,
+    q6_dateOfBirth: rawDob,
+    q7_reasonForVisit: rawReason,
+    q8_symptoms: rawSymptoms,
+    q9_duration: rawDuration,
+    q10_painLevel: rawPain,
+    q11_medications: rawMeds,
+    q12_allergies: rawAllergies,
+    q13_medicalHistory: rawHistory,
+    q14_insurance: rawInsurance,
+    q15_preferredDate: rawDate,
+    q16_preferredTime: rawTime,
+    submissionID: subId
   };
 
-  // Deep sanitize to guarantee 0 null or undefined values
-  const deepSanitize = (obj) => {
-    Object.keys(obj).forEach(key => {
-      if (obj[key] === null || obj[key] === undefined) {
-        obj[key] = '';
-      } else if (typeof obj[key] === 'object') {
-        deepSanitize(obj[key]);
-      }
-    });
-    return obj;
-  };
+  if (customWorkflowType) {
+    payload.workflowType = customWorkflowType;
+  }
 
-  return deepSanitize(payload);
+  return payload;
 }
 
 /**
- * Safely parse and normalize response from n8n into standard MediClin triage schema
+ * Normalizes n8n response into standard record object
  */
-export function normalizeN8nResponse(data, fallbackIntakeId) {
-  if (!data) return null;
-
-  // Case 1: Wrapped in { success: true, triage: { ... }, patient: { ... } }
-  let triageObj = null;
-  let patientObj = null;
-  let intakeId = fallbackIntakeId;
-
-  if (data.triage && typeof data.triage === 'object') {
-    triageObj = data.triage;
-    patientObj = data.patient || null;
-    intakeId = data.intake_id || fallbackIntakeId;
-  } else if (data.output && typeof data.output === 'object') {
-    // Case 2: LangChain output wrapper { output: { urgency_level: ... } }
-    triageObj = data.output;
-    patientObj = data.patient || null;
-  } else if (data.urgency_level || data.priority_score !== undefined) {
-    // Case 3: Direct triage object
-    triageObj = data;
-  } else if (Array.isArray(data) && data.length > 0) {
-    // Case 4: Array of items from n8n
-    const first = data[0];
-    if (first.triage) triageObj = first.triage;
-    else if (first.output) triageObj = first.output;
-    else if (first.urgency_level) triageObj = first;
+export function normalizeN8nResponse(data, rawSubmissionPayload) {
+  let resObj = data;
+  if (Array.isArray(data) && data.length > 0) {
+    resObj = data[0];
+  }
+  if (resObj && resObj.json) {
+    resObj = resObj.json;
   }
 
-  if (!triageObj) {
-    return null;
-  }
+  const payload = rawSubmissionPayload || {};
+  const firstName = payload.q3_fullName?.first || 'Patient';
+  const lastName = payload.q3_fullName?.last || '';
+  const fullName = `${firstName} ${lastName}`.trim() || 'Patient';
 
-  // Normalize urgency level
-  let urgency = (triageObj.urgency_level || 'routine').toLowerCase().trim();
-  if (urgency.includes('emerg')) urgency = 'emergency';
-  else if (urgency.includes('urg')) urgency = 'urgent';
-  else if (urgency.includes('rout') || urgency.includes('non')) urgency = 'routine';
-  else urgency = 'routine';
+  const subId = payload.submissionID || String(Math.floor(100000 + Math.random() * 900000));
+  const intakeId = `INT-${subId}`;
 
-  // Normalize score
-  let score = parseInt(triageObj.priority_score, 10);
-  if (isNaN(score)) {
-    if (urgency === 'emergency') score = 95;
-    else if (urgency === 'urgent') score = 75;
-    else score = 30;
-  }
+  const patient = {
+    patient_name: resObj?.patient?.name || resObj?.patient?.patient_name || fullName,
+    patient_email: resObj?.patient?.email || payload.q4_email || 'patient@example.org',
+    patient_phone: resObj?.patient?.phone || payload.q5_phone || '+1 (555) 000-0000',
+    date_of_birth: resObj?.patient?.date_of_birth || payload.q6_dateOfBirth || '1985-01-01',
+    reason_for_visit: resObj?.patient?.reason_for_visit || payload.q7_reasonForVisit || 'Clinical consultation',
+    symptoms: resObj?.patient?.symptoms || payload.q8_symptoms || '',
+    symptom_duration: resObj?.patient?.symptom_duration || payload.q9_duration || '1 day',
+    pain_level: resObj?.patient?.pain_level !== undefined ? resObj.patient.pain_level : (payload.q10_painLevel || 5),
+    current_medications: resObj?.patient?.current_medications || payload.q11_medications || 'None reported',
+    allergies: resObj?.patient?.allergies || payload.q12_allergies || 'NKDA',
+    medical_history: resObj?.patient?.medical_history || payload.q13_medicalHistory || 'None documented',
+    insurance_provider: resObj?.patient?.insurance_provider || payload.q14_insurance || 'Standard Insurance',
+    preferred_date: resObj?.patient?.preferred_date || payload.q15_preferredDate || new Date().toISOString().split('T')[0],
+    preferred_time: resObj?.patient?.preferred_time || payload.q16_preferredTime || '09:00 AM'
+  };
 
-  // ESI classification mapping
-  let esi = triageObj.esi_level || '';
-  if (!esi) {
-    if (urgency === 'emergency') esi = score >= 95 ? 'ESI Level 1 (STAT Resuscitation)' : 'ESI Level 2 (Emergent / High Risk)';
-    else if (urgency === 'urgent') esi = 'ESI Level 3 (Urgent / Multi-Resource Assessment)';
-    else esi = 'ESI Level 4/5 (Routine / Preventive Outpatient)';
-  }
+  const triageSource = resObj?.triage || resObj?.output || resObj || {};
 
-  const normalizedTriage = {
-    intake_id: triageObj.intake_id || intakeId || ('MED-' + Date.now()),
-    submission_date: triageObj.submission_date || new Date().toISOString(),
-    patient_age: triageObj.patient_age !== undefined ? triageObj.patient_age : (patientObj?.patient_age || 35),
-    patient_category: triageObj.patient_category || patientObj?.patient_category || 'Adult (18-64)',
-    urgency_level: urgency,
-    esi_level: esi,
-    priority_score: score,
-    urgency_reasoning: triageObj.urgency_reasoning || 'AI triage assessment completed via n8n.',
-    symptom_summary: triageObj.symptom_summary || 'Clinical intake processed.',
-    red_flag_symptoms: Array.isArray(triageObj.red_flag_symptoms) ? triageObj.red_flag_symptoms : (triageObj.red_flag_symptoms ? [String(triageObj.red_flag_symptoms)] : []),
-    possible_conditions: Array.isArray(triageObj.possible_conditions)
-      ? triageObj.possible_conditions.map(c => typeof c === 'object' ? (c.condition || JSON.stringify(c)) : String(c))
-      : (triageObj.possible_conditions ? [String(triageObj.possible_conditions)] : []),
-    critical_alerts: Array.isArray(triageObj.critical_alerts) ? triageObj.critical_alerts : (triageObj.critical_alerts ? [String(triageObj.critical_alerts)] : []),
-    recommended_provider: triageObj.recommended_provider || 'Attending Physician',
-    recommended_specialty: triageObj.recommended_specialty || 'General Medicine',
-    questions_for_provider: Array.isArray(triageObj.questions_for_provider) ? triageObj.questions_for_provider : [],
-    exams_needed: Array.isArray(triageObj.exams_needed) ? triageObj.exams_needed : [],
-    tests_to_consider: Array.isArray(triageObj.tests_to_consider) ? triageObj.tests_to_consider : [],
-    patient_instructions: Array.isArray(triageObj.patient_instructions) ? triageObj.patient_instructions : [],
-    items_to_bring: Array.isArray(triageObj.items_to_bring) ? triageObj.items_to_bring : ['Government Photo ID', 'Insurance Card'],
-    appointment_duration: triageObj.appointment_duration || '30 minutes',
-    detailed_analysis_markdown: triageObj.detailed_analysis_markdown || ''
+  const triage = {
+    intake_id: resObj?.intake_id || intakeId,
+    patient_age: resObj?.patient?.age || 35,
+    patient_category: resObj?.patient?.category || 'Adult (18-64)',
+    urgency_level: (triageSource.urgency_level || 'routine').toLowerCase(),
+    urgency_reasoning: triageSource.urgency_reasoning || 'Automated AI clinical decision support assessment.',
+    priority_score: typeof triageSource.priority_score === 'number' ? triageSource.priority_score : (parseInt(triageSource.priority_score, 10) || 50),
+    symptom_summary: triageSource.symptom_summary || patient.reason_for_visit,
+    red_flag_symptoms: Array.isArray(triageSource.red_flag_symptoms) ? triageSource.red_flag_symptoms : [],
+    possible_conditions: Array.isArray(triageSource.possible_conditions) ? triageSource.possible_conditions.map(c => typeof c === 'object' ? `${c.condition || ''} (${c.likelihood || 'Possible'})` : String(c)) : [],
+    critical_alerts: Array.isArray(triageSource.critical_alerts) ? triageSource.critical_alerts : [],
+    recommended_provider: triageSource.recommended_provider || 'Attending Physician',
+    recommended_specialty: triageSource.recommended_specialty || 'General / Internal Medicine',
+    questions_for_provider: Array.isArray(triageSource.questions_for_provider) ? triageSource.questions_for_provider : [],
+    exams_needed: Array.isArray(triageSource.exams_needed) ? triageSource.exams_needed : [],
+    tests_to_consider: Array.isArray(triageSource.tests_to_consider) ? triageSource.tests_to_consider : [],
+    patient_instructions: Array.isArray(triageSource.patient_instructions) ? triageSource.patient_instructions : [],
+    items_to_bring: Array.isArray(triageSource.items_to_bring) ? triageSource.items_to_bring : ['Photo ID', 'Insurance Card', 'Current Medication Bottles'],
+    appointment_duration: triageSource.appointment_duration || '30 minutes',
+    detailed_analysis_markdown: triageSource.detailed_analysis_markdown || ''
   };
 
   return {
-    triage: normalizedTriage,
-    patient: patientObj
+    source: 'n8n',
+    patient,
+    triage,
+    rawN8nData: resObj
   };
 }
 
 /**
- * Submit clinical payload to n8n webhook with explicit test/production mode routing
- * The main submission button strictly defaults to PRODUCTION unless an explicit developer mode is passed.
+ * Submit payload to the centralized n8n TEST Webhook
  */
-export async function submitToN8n(formData, options = {}) {
-  // 1. Resolve explicit Mode (default: 'production')
-  const mode = options.mode || getConfiguredN8nMode();
-
-  // 2. Resolve Endpoint URL
-  let targetUrl = options.url;
-  if (!targetUrl) {
-    targetUrl = mode === 'test' ? N8N_ENDPOINTS.test : N8N_ENDPOINTS.production;
-  }
-
-  const isTestMode = targetUrl.includes('/webhook-test/');
-  const payload = formatN8nPayload(formData);
-  const timeoutMs = options.timeoutMs || REQUEST_TIMEOUT_MS;
-
-  console.info('[MediClin] n8n mode:', isTestMode ? 'test' : 'production');
-  console.info('[MediClin] n8n endpoint:', targetUrl);
+export async function submitToN8n(rawFormData, options = {}) {
+  const payload = formatN8nPayload(rawFormData, options.workflowType);
+  const targetUrl = N8N_WEBHOOK_URL;
 
   const controller = new AbortController();
-  const timeoutTimer = setTimeout(() => {
-    controller.abort();
-  }, timeoutMs);
-
-  const startTime = performance.now();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
     const response = await fetch(targetUrl, {
@@ -317,123 +229,75 @@ export async function submitToN8n(formData, options = {}) {
       signal: controller.signal
     });
 
-    clearTimeout(timeoutTimer);
-    const durationMs = Math.round(performance.now() - startTime);
-
-    console.info(`[MediClin] n8n response received: HTTP ${response.status} (${durationMs}ms)`);
-
-    const rawText = await response.text();
-    let responseData = null;
-
-    try {
-      responseData = rawText ? JSON.parse(rawText) : null;
-    } catch {
-      responseData = { raw: rawText };
-    }
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-      let errorType = N8N_ERROR_TYPES.HTTP_ERROR;
-      let errorMessage = '';
+      const errorText = await response.text();
+      let errorJson = null;
+      try { errorJson = JSON.parse(errorText); } catch (e) {}
 
-      if (response.status === 404) {
-        errorType = isTestMode
-          ? N8N_ERROR_TYPES.TEST_LISTENER_NOT_ACTIVE
-          : N8N_ERROR_TYPES.PRODUCTION_WORKFLOW_INACTIVE;
-
-        errorMessage = isTestMode
-          ? 'n8n test listener is not active. In n8n editor, click "Test workflow" / "Listen for test event" before testing.'
-          : 'n8n production workflow is unavailable. Verify that the MediClin workflow is set to Active in n8n Cloud.';
-      } else if (response.status === 400) {
-        errorType = N8N_ERROR_TYPES.HTTP_400;
-        errorMessage = responseData?.message || responseData?.error || 'Bad request. Required intake information was missing or malformed.';
-      } else if (response.status === 500) {
-        errorType = N8N_ERROR_TYPES.HTTP_500;
-        errorMessage = responseData?.message || responseData?.error || 'Internal error in n8n workflow execution node.';
-      } else {
-        errorMessage = responseData?.message || responseData?.error || rawText || `HTTP ${response.status} ${response.statusText}`;
+      if (response.status === 404 && (errorJson?.message?.includes('not registered') || errorText.includes('not registered'))) {
+        return {
+          success: false,
+          errorType: N8N_ERROR_TYPES.TEST_LISTENER_NOT_ACTIVE,
+          error: "The n8n TEST webhook is not listening. In your n8n Cloud editor, click 'Listen for test event' or 'Execute workflow' then try again.",
+          status: 404,
+          url: targetUrl,
+          rawPayload: payload
+        };
       }
 
       return {
         success: false,
+        errorType: response.status === 500 ? N8N_ERROR_TYPES.HTTP_500 : N8N_ERROR_TYPES.N8N_WORKFLOW_ERROR,
+        error: `n8n returned HTTP ${response.status}: ${errorJson?.message || errorText || response.statusText}`,
         status: response.status,
-        statusText: response.statusText,
-        errorType: errorType,
-        durationMs,
-        isWorkflowInactive: response.status === 404,
-        isTestListenerInactive: isTestMode && response.status === 404,
-        targetUrl,
-        error: errorMessage,
-        rawError: rawText,
-        payloadSent: payload
+        url: targetUrl,
+        rawPayload: payload
       };
     }
 
-    if (!responseData) {
-      return {
-        success: false,
-        status: response.status,
-        errorType: N8N_ERROR_TYPES.INVALID_RESPONSE,
-        durationMs,
-        targetUrl,
-        error: 'n8n returned an empty or invalid response payload.',
-        payloadSent: payload
-      };
-    }
-
-    const normalized = normalizeN8nResponse(responseData, formData.intake_id);
+    const responseData = await response.json();
+    const normalized = normalizeN8nResponse(responseData, payload);
 
     return {
       success: true,
-      status: response.status,
-      errorType: null,
-      durationMs,
-      targetUrl,
       data: responseData,
-      normalized: normalized,
-      payloadSent: payload
+      normalized,
+      url: targetUrl,
+      rawPayload: payload
     };
 
   } catch (err) {
-    clearTimeout(timeoutTimer);
-    const durationMs = Math.round(performance.now() - startTime);
+    clearTimeout(timeoutId);
 
     if (err.name === 'AbortError') {
-      console.warn(`[MediClin] n8n request timed out after ${timeoutMs / 1000}s`);
       return {
         success: false,
-        status: 0,
         errorType: N8N_ERROR_TYPES.TIMEOUT,
-        isTimeout: true,
-        durationMs,
-        targetUrl,
-        error: `Request timed out after ${timeoutMs / 1000}s. The AI triage pipeline is taking longer than expected.`,
-        payloadSent: payload
+        error: `n8n request timed out after ${REQUEST_TIMEOUT_MS / 1000}s. The AI triage pipeline took too long to return a response.`,
+        url: targetUrl,
+        rawPayload: payload
       };
     }
 
-    const isNetworkError = err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('CORS'));
-    const isCors = err.message && err.message.includes('CORS');
-
-    let classifiedError = N8N_ERROR_TYPES.NETWORK_ERROR;
-    let userMsg = `Connection to n8n webhook failed (${err.message}).`;
-
-    if (isTestMode) {
-      classifiedError = N8N_ERROR_TYPES.TEST_LISTENER_NOT_ACTIVE;
-      userMsg = 'n8n test listener is not active or connection refused. In n8n, click "Test workflow" to listen for events.';
-    } else if (isCors) {
-      classifiedError = N8N_ERROR_TYPES.CORS_ERROR;
-      userMsg = 'CORS request blocked by browser. Ensure webhook is accessible.';
+    const msg = err.message || '';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS')) {
+      return {
+        success: false,
+        errorType: N8N_ERROR_TYPES.NETWORK_ERROR,
+        error: "Network connection to n8n Cloud failed. Please verify internet connectivity.",
+        url: targetUrl,
+        rawPayload: payload
+      };
     }
 
     return {
       success: false,
-      status: 0,
-      errorType: classifiedError,
-      isNetworkError: true,
-      durationMs,
-      targetUrl,
-      error: userMsg,
-      payloadSent: payload
+      errorType: N8N_ERROR_TYPES.N8N_WORKFLOW_ERROR,
+      error: msg || "Unknown error connecting to n8n webhook.",
+      url: targetUrl,
+      rawPayload: payload
     };
   }
 }

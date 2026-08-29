@@ -10,6 +10,7 @@ import { renderIntakeForm } from '../components/intake-form.js';
 import { renderProviderBrief } from '../components/provider-brief.js';
 import { renderWorkflowStepper } from '../components/stepper.js';
 import { renderPatientAlerts, renderPatientStatusOverview } from '../components/triage-results.js';
+import { renderAutomationWorkflow } from '../components/automation-workflow.js';
 import { state } from '../state.js';
 
 export function renderHomeView(containerEl) {
@@ -33,6 +34,9 @@ export function renderHomeView(containerEl) {
           <div id="patientAlertsMount"></div>
         </div>
 
+        <!-- Row 2.5: Dynamic Automation Workflow Pipeline (Emergency / Urgent / Routine) -->
+        <div id="automationWorkflowMount"></div>
+
         <!-- Row 3 (Last Row): Clinical Provider Brief (SBAR Matrix) for Downloading / Copying -->
         <div id="providerBriefMount"></div>
 
@@ -48,25 +52,28 @@ export function renderHomeView(containerEl) {
   const assessSection = containerEl.querySelector('#assessmentSectionMount');
   const statusMount = containerEl.querySelector('#patientStatusMount');
   const alertsMount = containerEl.querySelector('#patientAlertsMount');
+  const workflowMount = containerEl.querySelector('#automationWorkflowMount');
   const briefMount = containerEl.querySelector('#providerBriefMount');
 
   // Render Stepper (Step 1 active initially, Step 2-5 active upon triage)
   renderWorkflowStepper(stepperMount, isEvaluated ? 2 : 1);
 
-  // If already evaluated, populate rows 2 and 3
+  // If already evaluated, populate rows 2, 2.5, and 3
   if (isEvaluated) {
     renderPatientStatusOverview(statusMount, state.activeIntake);
     renderPatientAlerts(alertsMount, state.activeIntake);
+    renderAutomationWorkflow(workflowMount, state.activeIntake);
     renderProviderBrief(briefMount, state.activeIntake);
   }
 
   // Mount Intake Form in Row 1
   renderIntakeForm(formMount, (newRecord) => {
-    // Reveal Row 2 & 3
+    // Reveal Assessment Container
     assessSection.style.display = 'flex';
     renderWorkflowStepper(stepperMount, 2);
     renderPatientStatusOverview(statusMount, newRecord);
     renderPatientAlerts(alertsMount, newRecord);
+    renderAutomationWorkflow(workflowMount, newRecord);
     renderProviderBrief(briefMount, newRecord);
 
     // Smooth scroll down to assessment results in Row 2

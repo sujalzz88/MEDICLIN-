@@ -3,7 +3,6 @@
    Routing, State Subscriptions, Sidebar & Navigation Controller
    ========================================================================== */
 
-import { renderN8nModal } from './components/n8n-workflow-modal.js';
 import { renderHeaderNav } from './components/nav.js';
 import { renderSidebar } from './components/sidebar.js';
 import { state } from './state.js';
@@ -12,6 +11,7 @@ import { renderContactView } from './views/contact.js';
 import { renderEmergencyView } from './views/emergency.js';
 import { renderHomeView } from './views/home.js';
 import { renderUrgentView } from './views/urgent.js';
+import { renderPlanningView } from './views/planning.js';
 
 function initApp() {
   if (window.__mediclinAppInitialized) return;
@@ -20,14 +20,12 @@ function initApp() {
   const headerMount = document.getElementById('headerMount');
   const sidebarMount = document.getElementById('sidebarMount');
   const mainMount = document.getElementById('mainMount');
-  const modalMount = document.getElementById('modalMount');
 
   if (!headerMount || !mainMount) return;
 
   // Render static frame components
   renderHeaderNav(headerMount);
   if (sidebarMount) renderSidebar(sidebarMount);
-  if (modalMount) renderN8nModal(modalMount);
 
   // Router Controller
   const updateRoute = () => {
@@ -44,6 +42,10 @@ function initApp() {
         break;
       case 'URGENT':
         renderUrgentView(mainMount);
+        break;
+      case 'ROUTINE PLANNING':
+      case 'PLANNING':
+        renderPlanningView(mainMount);
         break;
       case 'CONTACT US':
         renderContactView(mainMount);

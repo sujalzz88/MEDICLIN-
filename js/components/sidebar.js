@@ -11,12 +11,13 @@ export function renderSidebar(containerEl) {
   const currentRoute = state.currentRoute;
   const emergencyCount = state.getEmergencyQueue().length;
   const urgentCount = state.getUrgentQueue().length;
+  const routineCount = state.getRoutineQueue().length;
 
   const navItems = [
     { id: 'HOME', label: 'HOME CONSOLE', icon: '📊' },
     { id: 'EMERGENCY', label: 'EMERGENCY QUEUE', icon: '🚨', count: emergencyCount, isEmergency: true },
     { id: 'URGENT', label: 'URGENT QUEUE', icon: '⚠️', count: urgentCount, isUrgent: true },
-    { id: 'CONTACT US', label: 'WORKFLOW CONFIG', icon: '⚡' },
+    { id: 'ROUTINE PLANNING', label: 'ROUTINE PLANNING', icon: '📅', count: routineCount },
     { id: 'ABOUT US', label: 'ABOUT ENGINE', icon: 'ℹ️' }
   ];
 

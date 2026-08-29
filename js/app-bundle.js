@@ -824,12 +824,8 @@
     return cleanMode;
   }
 
-  function getActiveWebhookUrl(modeOverride) {
-    var mode = modeOverride || getConfiguredN8nMode();
-    if (mode === 'test') {
-      return N8N_ENDPOINTS.test;
-    }
-    return N8N_ENDPOINTS.production;
+  function getActiveWebhookUrl() {
+    return N8N_WEBHOOK_URL;
   }
 
   function setActiveWebhookUrl(url) {
@@ -1441,11 +1437,12 @@
     var emergencyCount = state.getEmergencyQueue().length;
     var urgentCount = state.getUrgentQueue().length;
 
+    var routineCount = state.getRoutineQueue().length;
     var navItems = [
       { id: 'HOME', label: 'HOME CONSOLE', icon: '📊' },
       { id: 'EMERGENCY', label: 'EMERGENCY QUEUE', icon: '🚨', count: emergencyCount, isEmergency: true },
       { id: 'URGENT', label: 'URGENT QUEUE', icon: '⚠️', count: urgentCount, isUrgent: true },
-      { id: 'CONTACT US', label: 'WORKFLOW CONFIG', icon: '⚡' },
+      { id: 'ROUTINE PLANNING', label: 'ROUTINE PLANNING', icon: '📅', count: routineCount },
       { id: 'ABOUT US', label: 'ABOUT ENGINE', icon: 'ℹ️' }
     ];
 
@@ -1508,204 +1505,408 @@
     });
   }
 
-  function renderN8nModal(containerEl) {
-    var activeMode = getConfiguredN8nMode();
-    var activeUrl = getActiveWebhookUrl(activeMode);
+  
+  // --- UNIVERSAL ROUTINE & CARE PLANNING VIEW ---
+  function renderPlanningView(containerEl) {
+    var activeWorkflowType = 'routine';
+    var isSubmitting = false;
+    var lastPlanningResult = null;
+    var activeIntake = state.activeIntake;
 
-    var html = [
-      '<div id="n8nModalBackdrop" class="modal-backdrop">',
-      '  <div class="modal-dialog">',
-      '    <div class="modal-header">',
-      '      <div style="display:flex; align-items:center; gap:0.6rem;">',
-      '        <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, #0284C7 0%, #00798C 100%); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:900;">⚡</div>',
-      '        <div><h3 style="font-size:1.05rem; font-weight:800; color:var(--teal-primary);">MediClin Automation Suite — N8N Workflow Gateway</h3><div style="font-size:0.75rem; color:var(--text-muted);">Bi-directional Webhook Gateway for EHR & AI Emergency Triage Systems</div></div>',
-      '      </div>',
-      '      <button id="closeN8nModalBtn" class="neu-btn" style="padding:0.35rem 0.75rem; font-size:0.9rem;">✕</button>',
-      '    </div>',
-      '    <div class="modal-body" style="display:flex; flex-direction:column; gap:1rem;">',
-      '      <div class="neu-card-recessed" style="padding:1rem;">',
-      '        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem; flex-wrap:wrap; gap:0.5rem;">',
-      '          <div style="display:flex; align-items:center; gap:0.5rem;">',
-      '            <label class="neu-label" style="font-size:0.78rem; margin:0;">N8N Webhook Gateway Target</label>',
-      '            <span id="modalActiveModeBadge" class="neu-badge ' + (activeMode === 'test' ? 'urgent' : 'routine') + '" style="font-size:0.68rem; padding:0.15rem 0.5rem;">' + (activeMode === 'test' ? '🧪 TEST MODE ACTIVE' : '🏭 PRODUCTION DEFAULT') + '</span>',
-      '          </div>',
-      '          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">',
-      '            <button type="button" id="useProdUrlBtn" class="neu-btn" style="font-size:0.72rem; padding:0.25rem 0.6rem; color:var(--teal-primary); font-weight:700;">🏭 Production</button>',
-      '            <button type="button" id="useTestUrlBtn" class="neu-btn" style="font-size:0.72rem; padding:0.25rem 0.6rem; color:var(--urgent-amber); font-weight:700;">🧪 Test Mode</button>',
-      '          </div>',
-      '        </div>',
-      '        <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:stretch;">',
-      '          <input type="url" id="n8nWebhookUrlInput" class="neu-input" style="flex:1; min-width:min(100%, 200px); font-family:var(--font-mono); font-size:0.82rem;" placeholder="https://aryanna.app.n8n.cloud/webhook/..." value="' + activeUrl + '" />',
-      '          <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">',
-      '            <button id="saveN8nUrlBtn" class="neu-btn" style="font-size:0.8rem; padding:0.45rem 1rem; flex:1;">💾 Save URL</button>',
-      '            <button id="testN8nDispatchBtn" class="neu-btn neu-btn-primary" style="font-size:0.8rem; padding:0.45rem 1rem; flex:1;">🚀 Test Webhook</button>',
-      '          </div>',
-      '        </div>',
-      '        <div style="margin-top:0.6rem; font-size:0.72rem; color:var(--text-muted); line-height:1.5; word-break:break-all; overflow-wrap:anywhere;">• <strong>🏭 Production URL:</strong> <code>' + N8N_ENDPOINTS.production + '</code><br/><span style="color:var(--text-sub);">&nbsp;&nbsp;↳ Used by main <strong>PROCESS AI TRIAGE</strong> button. (Requires workflow Active in n8n).</span><br/>• <strong>🧪 Test URL:</strong> <code>' + N8N_ENDPOINTS.test + '</code><br/><span style="color:var(--text-sub);">&nbsp;&nbsp;↳ Used by <strong>Test Webhook</strong> button. (Requires clicking "Test workflow" in n8n editor).</span></div>',
-      '      </div>',
-      '      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">',
-      '        <span style="font-size:0.75rem; font-weight:800; color:var(--teal-primary); text-transform:uppercase; letter-spacing:0.04em;">Structured Outbound n8n Payload Schema:</span>',
-      '        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;"><button id="copyJsonPayloadBtn" class="neu-btn" style="font-size:0.75rem; padding:0.3rem 0.7rem;">📋 Copy JSON</button><button id="downloadJsonPayloadBtn" class="neu-btn" style="font-size:0.75rem; padding:0.3rem 0.7rem;">⬇️ Download .JSON</button></div>',
-      '      </div>',
-      '      <pre class="json-box" id="n8nJsonPreview" style="max-height:260px; overflow:auto;">// No active clinical record loaded.</pre>',
-      '      <div id="n8nStatusBanner" style="display:none; padding:0.75rem 1rem; border-radius:8px; font-size:0.82rem; font-weight:700;"></div>',
-      '    </div>',
-      '  </div>',
-      '</div>'
-    ].join('');
+    function render() {
+      var isEmerg = activeWorkflowType === 'emergency';
+      var isUrg = activeWorkflowType === 'urgent';
+      var isRout = activeWorkflowType === 'routine';
 
-    var wrapper = document.createElement('div');
-    wrapper.innerHTML = html;
-    containerEl.appendChild(wrapper);
+      var headerBadgeText = '📅 ROUTINE SCHEDULING PLANNER';
+      var headerBadgeClass = 'routine';
+      var themeBorder = 'var(--routine-green)';
+      var defaultDuration = '30 min';
+      var defaultSpecialty = 'Internal Medicine / Primary Care';
+      var actionLabel = '🚀 SUBMIT ROUTINE PLANNING REQUEST';
 
-    var backdrop = containerEl.querySelector('#n8nModalBackdrop');
-    var closeBtn = containerEl.querySelector('#closeN8nModalBtn');
-    var saveBtn = containerEl.querySelector('#saveN8nUrlBtn');
-    var testBtn = containerEl.querySelector('#testN8nDispatchBtn');
-    var prodBtn = containerEl.querySelector('#useProdUrlBtn');
-    var testUrlBtn = containerEl.querySelector('#useTestUrlBtn');
-    var urlInput = containerEl.querySelector('#n8nWebhookUrlInput');
-    var modeBadge = containerEl.querySelector('#modalActiveModeBadge');
-    var copyBtn = containerEl.querySelector('#copyJsonPayloadBtn');
-    var dlBtn = containerEl.querySelector('#downloadJsonPayloadBtn');
-    var preview = containerEl.querySelector('#n8nJsonPreview');
-    var statusBanner = containerEl.querySelector('#n8nStatusBanner');
+      if (isEmerg) {
+        headerBadgeText = '🚨 EMERGENCY CARE & TRAUMA PLANNER';
+        headerBadgeClass = 'emergency';
+        themeBorder = 'var(--emergency-red)';
+        defaultDuration = '60 min (STAT)';
+        defaultSpecialty = 'Trauma Resuscitation / Cardiology';
+        actionLabel = '🚨 SUBMIT EMERGENCY ACTION PLAN';
+      } else if (isUrg) {
+        headerBadgeText = '⚡ URGENT AMBULATORY FAST-TRACK PLANNER';
+        headerBadgeClass = 'urgent';
+        themeBorder = 'var(--urgent-amber)';
+        defaultDuration = '45 min';
+        defaultSpecialty = 'Urgent Care / Acute Diagnostics';
+        actionLabel = '⚡ SUBMIT URGENT PLANNING REQUEST';
+      }
 
-    var currentRecord = null;
+      var html = [
+        '<div style="max-width: 1100px; margin: 0 auto; display:flex; flex-direction:column; gap:1.35rem;">',
+        '  <div class="neu-card" style="padding: 1.5rem; border-left: 6px solid ' + themeBorder + '; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">',
+        '    <div>',
+        '      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.4rem;">',
+        '        <span class="neu-acuity-badge ' + headerBadgeClass + '">',
+        '          <span class="led-dot ' + headerBadgeClass + '"></span>',
+        '          ' + headerBadgeText,
+        '        </span>',
+        '        <span style="font-size:0.75rem; font-weight:800; color:var(--teal-primary); background:rgba(0, 121, 140, 0.08); padding:0.2rem 0.55rem; border-radius:6px;">',
+        '          UNIVERSAL WORKFLOW ENGINE',
+        '        </span>',
+        '      </div>',
+        '      <h2 style="font-size: 1.35rem; font-weight: 900; color: var(--text-main);">',
+        '        Clinical Care Planning & Resource Allocation',
+        '      </h2>',
+        '      <p style="font-size: 0.85rem; color: var(--text-sub); margin-top:0.25rem;">',
+        '        Prepare operational scheduling directives, physician assignment, and pre-arrival instructions to dispatch to the n8n automation pipeline.',
+        '      </p>',
+        '    </div>',
+        activeIntake ? '    <button id="loadActiveIntakeBtn" class="neu-btn neu-btn-primary" style="font-size:0.8rem; padding:0.45rem 0.85rem;" title="Pre-populate form with active triage patient">📋 Load Active Patient (' + activeIntake.patient.patient_name + ')</button>' : '',
+        '  </div>',
+        '  <div class="neu-card" style="padding: 1rem 1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">',
+        '    <div style="font-size:0.78rem; font-weight:800; color:var(--teal-primary); text-transform:uppercase; letter-spacing:0.04em;">Select Operational Planning Workflow:</div>',
+        '    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">',
+        '      <button class="workflow-type-tab neu-btn ' + (isEmerg ? 'active' : '') + '" data-type="emergency" style="font-size:0.8rem; padding:0.4rem 0.85rem; color:' + (isEmerg ? 'var(--emergency-red)' : 'inherit') + '; font-weight:' + (isEmerg ? '900' : '700') + ';">🚨 Emergency Planning</button>',
+        '      <button class="workflow-type-tab neu-btn ' + (isUrg ? 'active' : '') + '" data-type="urgent" style="font-size:0.8rem; padding:0.4rem 0.85rem; color:' + (isUrg ? 'var(--urgent-amber)' : 'inherit') + '; font-weight:' + (isUrg ? '900' : '700') + ';">⚡ Urgent Planning</button>',
+        '      <button class="workflow-type-tab neu-btn ' + (isRout ? 'active' : '') + '" data-type="routine" style="font-size:0.8rem; padding:0.4rem 0.85rem; color:' + (isRout ? 'var(--routine-green)' : 'inherit') + '; font-weight:' + (isRout ? '900' : '700') + ';">📅 Routine Planning</button>',
+        '    </div>',
+        '  </div>',
+        '  <form id="planningForm" class="neu-card" style="padding: 1.5rem; display:flex; flex-direction:column; gap:1.25rem;">',
+        '    <div>',
+        '      <h3 style="font-size:0.88rem; font-weight:900; color:var(--teal-primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">👤 1. Patient Identity & Demographics</h3>',
+        '      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:0.85rem;">',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_patient_name">Patient Full Name</label><input type="text" id="plan_patient_name" class="neu-input" placeholder="e.g. Eleanor Vance" required /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_intake_id">Intake MRN / Reference ID</label><input type="text" id="plan_intake_id" class="neu-input" placeholder="e.g. INT-423901" /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_patient_phone">Contact Phone</label><input type="tel" id="plan_patient_phone" class="neu-input" placeholder="e.g. +1 (555) 234-8901" required /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_patient_email">Contact Email</label><input type="email" id="plan_patient_email" class="neu-input" placeholder="e.g. patient@example.org" required /></div>',
+        '      </div>',
+        '    </div>',
+        '    <div>',
+        '      <h3 style="font-size:0.88rem; font-weight:900; color:var(--teal-primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">🩺 2. Chief Complaint & Clinical Reason</h3>',
+        '      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:0.85rem;">',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_reason">Reason for Visit / Procedure</label><input type="text" id="plan_reason" class="neu-input" placeholder="e.g. Cardiac consultation" required /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_symptoms">Presenting Symptoms & Clinical History</label><input type="text" id="plan_symptoms" class="neu-input" placeholder="e.g. Radiating chest pressure" /></div>',
+        '      </div>',
+        '    </div>',
+        '    <div>',
+        '      <h3 style="font-size:0.88rem; font-weight:900; color:var(--teal-primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">⏱️ 3. Scheduling & Resource Allocation</h3>',
+        '      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:0.85rem;">',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_date">Target Appointment Date</label><input type="date" id="plan_date" class="neu-input" value="' + new Date().toISOString().split('T')[0] + '" required /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_time">Preferred Time Window</label><input type="text" id="plan_time" class="neu-input" value="' + (isEmerg ? 'Immediate STAT' : '09:30 AM') + '" required /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_duration">Allocated Visit Duration</label><input type="text" id="plan_duration" class="neu-input" value="' + defaultDuration + '" required /></div>',
+        '        <div class="neu-form-group"><label class="neu-label" for="plan_specialty">Assigned Specialty / Provider</label><input type="text" id="plan_specialty" class="neu-input" value="' + defaultSpecialty + '" required /></div>',
+        '      </div>',
+        '    </div>',
+        '    <div>',
+        '      <h3 style="font-size:0.88rem; font-weight:900; color:var(--teal-primary); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">📝 4. Clinical Directives & Patient Instructions</h3>',
+        '      <div class="neu-form-group"><label class="neu-label" for="plan_instructions">Pre-Arrival Instructions & Operational Directives</label><textarea id="plan_instructions" class="neu-textarea" style="min-height:75px;" placeholder="e.g. Bring photo ID, medication bottles. Fast 8 hours prior to visit."></textarea></div>',
+        '    </div>',
+        '    <div style="display:flex; justify-content:flex-end; gap:0.75rem; margin-top:0.5rem;">',
+        '      <button type="submit" id="submitPlanBtn" class="neu-btn neu-btn-primary" style="padding:0.75rem 1.75rem; font-size:0.9rem; font-weight:900;" ' + (isSubmitting ? 'disabled' : '') + '>' + (isSubmitting ? '⏳ TRANSMITTING PLANNING DIRECTIVE TO N8N...' : actionLabel) + '</button>',
+        '    </div>',
+        '  </form>',
+        '  <div id="planResultMount" style="display:' + (lastPlanningResult ? 'flex' : 'none') + '; flex-direction:column; gap:1.35rem;"></div>',
+        '</div>'
+      ].join('');
 
-    var showStatus = function (msg, isSuccess) {
-      statusBanner.style.display = 'block';
-      statusBanner.style.background = isSuccess !== false ? 'var(--routine-bg)' : 'var(--emergency-bg)';
-      statusBanner.style.color = isSuccess !== false ? 'var(--routine-green)' : 'var(--emergency-red)';
-      statusBanner.style.border = isSuccess !== false ? '1px solid #86EFAC' : '1px solid #FCA5A5';
-      statusBanner.innerHTML = msg;
-    };
+      containerEl.innerHTML = html;
 
-    var updatePreview = function (record) {
-      currentRecord = record || state.activeIntake;
-      var patientData = (currentRecord && currentRecord.patient) ? currentRecord.patient : (currentRecord || INITIAL_PRESETS.EMERGENCY_CARDIAC);
-      var payload = formatN8nPayload(patientData);
-      preview.textContent = JSON.stringify(payload, null, 2);
-    };
-
-    var closeModal = function () {
-      backdrop.classList.remove('open');
-    };
-
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (backdrop) {
-      backdrop.addEventListener('click', function (e) {
-        if (e.target === backdrop) closeModal();
-      });
-    }
-
-    if (prodBtn) {
-      prodBtn.addEventListener('click', function () {
-        setN8nMode('production');
-        if (urlInput) urlInput.value = N8N_ENDPOINTS.production;
-        if (modeBadge) {
-          modeBadge.className = 'neu-badge routine';
-          modeBadge.textContent = '🏭 PRODUCTION DEFAULT';
-        }
-        showStatus("✅ Set to Production Webhook Mode. (Ensure workflow is Active in n8n Cloud).");
-      });
-    }
-
-    if (testUrlBtn) {
-      testUrlBtn.addEventListener('click', function () {
-        setN8nMode('test');
-        if (urlInput) urlInput.value = N8N_ENDPOINTS.test;
-        if (modeBadge) {
-          modeBadge.className = 'neu-badge urgent';
-          modeBadge.textContent = '🧪 TEST MODE ACTIVE';
-        }
-        showStatus("🧪 Set to Test Webhook Mode. (Make sure you clicked 'Test workflow' in n8n editor).");
-      });
-    }
-
-    if (saveBtn) {
-      saveBtn.addEventListener('click', function () {
-        var url = urlInput ? urlInput.value.trim() : '';
-        if (!url) {
-          showStatus("⚠️ Webhook URL cannot be empty.", false);
-          return;
-        }
-        if (url.indexOf('/webhook-test/') !== -1) {
-          setN8nMode('test');
-          if (modeBadge) {
-            modeBadge.className = 'neu-badge urgent';
-            modeBadge.textContent = '🧪 TEST MODE ACTIVE';
-          }
-        } else {
-          setN8nMode('production');
-          if (modeBadge) {
-            modeBadge.className = 'neu-badge routine';
-            modeBadge.textContent = '🏭 PRODUCTION DEFAULT';
-          }
-        }
-        showStatus("✅ N8N Webhook Endpoint configured.");
-      });
-    }
-
-    if (copyBtn) {
-      copyBtn.addEventListener('click', function () {
-        if (preview) {
-          navigator.clipboard.writeText(preview.textContent).then(function () {
-            showStatus("📋 JSON data payload copied to clipboard!");
-          });
-        }
-      });
-    }
-
-    if (dlBtn) {
-      dlBtn.addEventListener('click', function () {
-        if (preview) {
-          var blob = new Blob([preview.textContent], { type: 'application/json' });
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement('a');
-          a.href = url;
-          a.download = "mediclin_n8n_payload_" + Date.now() + ".json";
-          a.click();
-          URL.revokeObjectURL(url);
-          showStatus("⬇️ JSON payload downloaded.");
-        }
-      });
-    }
-
-    if (testBtn) {
-      testBtn.addEventListener('click', function () {
-        var customUrl = urlInput ? urlInput.value.trim() : '';
-        var testTargetUrl = (customUrl && customUrl.indexOf('/webhook-test/') !== -1) ? customUrl : N8N_ENDPOINTS.test;
-
-        showStatus("⏳ Transmitting synthetic test patient to <code>" + testTargetUrl + "</code>...", true);
-
-        submitToN8n(SYNTHETIC_TEST_PATIENT, { url: testTargetUrl, mode: 'test' }).then(function (result) {
-          if (result.success) {
-            showStatus("✅ <strong>Test Webhook Succeeded!</strong> (HTTP " + result.status + " OK • " + result.durationMs + "ms)<br/><span style=\"font-size:0.75rem; font-weight:normal;\">n8n pipeline received test payload and returned valid triage response.</span>", true);
-          } else if (result.isTestListenerInactive || result.status === 404) {
-            showStatus("⚠️ <strong>n8n Test Listener Not Active (HTTP 404)</strong><br/><span style=\"font-size:0.75rem; font-weight:normal;\">Click <strong>\"Test workflow\"</strong> in n8n editor, then click <strong>\"Test Webhook\"</strong> again.</span>", false);
-          } else {
-            showStatus("❌ <strong>Test Webhook Failed:</strong> " + result.error, false);
-          }
+      containerEl.querySelectorAll('.workflow-type-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          clinicalAudio.playClick();
+          activeWorkflowType = tab.getAttribute('data-type');
+          render();
         });
       });
+
+      var loadBtn = containerEl.querySelector('#loadActiveIntakeBtn');
+      if (loadBtn && activeIntake) {
+        loadBtn.addEventListener('click', function () {
+          clinicalAudio.playClick();
+          var p = activeIntake.patient;
+          var t = activeIntake.triage;
+          var nameInput = containerEl.querySelector('#plan_patient_name');
+          var idInput = containerEl.querySelector('#plan_intake_id');
+          var phoneInput = containerEl.querySelector('#plan_patient_phone');
+          var emailInput = containerEl.querySelector('#plan_patient_email');
+          var reasonInput = containerEl.querySelector('#plan_reason');
+          var symptomsInput = containerEl.querySelector('#plan_symptoms');
+          var specialtyInput = containerEl.querySelector('#plan_specialty');
+          var instructionsInput = containerEl.querySelector('#plan_instructions');
+
+          if (nameInput) nameInput.value = p.patient_name || '';
+          if (idInput) idInput.value = t.intake_id || '';
+          if (phoneInput) phoneInput.value = p.patient_phone || '';
+          if (emailInput) emailInput.value = p.patient_email || '';
+          if (reasonInput) reasonInput.value = p.reason_for_visit || '';
+          if (symptomsInput) symptomsInput.value = p.symptoms || '';
+          if (specialtyInput) specialtyInput.value = t.recommended_specialty || defaultSpecialty;
+          if (instructionsInput) instructionsInput.value = (t.patient_instructions || []).join('; ') || '';
+
+          if (t.urgency_level) {
+            activeWorkflowType = t.urgency_level.toLowerCase().indexOf('emerg') !== -1 ? 'emergency' : (t.urgency_level.toLowerCase().indexOf('urg') !== -1 ? 'urgent' : 'routine');
+          }
+        });
+      }
+
+      var form = containerEl.querySelector('#planningForm');
+      var resultMount = containerEl.querySelector('#planResultMount');
+      if (lastPlanningResult && resultMount) {
+        renderAutomationWorkflow(resultMount, lastPlanningResult);
+      }
+
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          if (isSubmitting) return;
+
+          isSubmitting = true;
+          clinicalAudio.playClick();
+          render();
+
+          var formData = {
+            patient_name: containerEl.querySelector('#plan_patient_name') ? containerEl.querySelector('#plan_patient_name').value : '',
+            intake_id: containerEl.querySelector('#plan_intake_id') ? containerEl.querySelector('#plan_intake_id').value : '',
+            patient_phone: containerEl.querySelector('#plan_patient_phone') ? containerEl.querySelector('#plan_patient_phone').value : '',
+            patient_email: containerEl.querySelector('#plan_patient_email') ? containerEl.querySelector('#plan_patient_email').value : '',
+            reason_for_visit: containerEl.querySelector('#plan_reason') ? containerEl.querySelector('#plan_reason').value : '',
+            symptoms: containerEl.querySelector('#plan_symptoms') ? containerEl.querySelector('#plan_symptoms').value : '',
+            preferred_date: containerEl.querySelector('#plan_date') ? containerEl.querySelector('#plan_date').value : '',
+            preferred_time: containerEl.querySelector('#plan_time') ? containerEl.querySelector('#plan_time').value : '',
+            symptom_duration: containerEl.querySelector('#plan_duration') ? containerEl.querySelector('#plan_duration').value : '30 min',
+            medical_history: containerEl.querySelector('#plan_specialty') ? containerEl.querySelector('#plan_specialty').value : defaultSpecialty,
+            current_medications: containerEl.querySelector('#plan_instructions') ? containerEl.querySelector('#plan_instructions').value : '',
+            workflowType: activeWorkflowType
+          };
+
+          submitToN8n(formData, { workflowType: activeWorkflowType }).then(function (result) {
+            if (result.success && result.normalized) {
+              result.normalized.triage.urgency_level = activeWorkflowType;
+              lastPlanningResult = result.normalized;
+              if (activeWorkflowType === 'emergency') clinicalAudio.playEmergencySiren();
+              else if (activeWorkflowType === 'urgent') clinicalAudio.playUrgentBeep();
+              else clinicalAudio.playChime();
+            } else {
+              alert('⚠️ Planning Submission Notice: ' + (result.error || 'Failed to connect to n8n webhook.'));
+            }
+          }).catch(function (err) {
+            alert('⚠️ Error dispatching planning directive: ' + err.message);
+          }).finally(function () {
+            isSubmitting = false;
+            render();
+            var newResultMount = containerEl.querySelector('#planResultMount');
+            if (newResultMount && lastPlanningResult) {
+              newResultMount.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          });
+        });
+      }
     }
 
-    window.addEventListener('open-n8n-modal', function (e) {
-      updatePreview(e.detail);
-      var curMode = getConfiguredN8nMode();
-      if (urlInput) urlInput.value = getActiveWebhookUrl(curMode);
-      if (modeBadge) {
-        modeBadge.className = 'neu-badge ' + (curMode === 'test' ? 'urgent' : 'routine');
-        modeBadge.textContent = curMode === 'test' ? '🧪 TEST MODE ACTIVE' : '🏭 PRODUCTION DEFAULT';
-      }
-      if (backdrop) backdrop.classList.add('open');
-    });
-
-    updatePreview(state.activeIntake);
+    render();
   }
 
+
   // --- 7. HOME VIEW (FORM IN ROW 1 ➔ ASSESSMENT IN ROW 2 & 3 ON PROCESS) ---
+  
+  // --- DYNAMIC AUTOMATION WORKFLOW COMPONENT ---
+  function normalizeTriageCategory(rawCategory) {
+    if (!rawCategory || typeof rawCategory !== 'string') return 'unknown';
+    var clean = rawCategory.toLowerCase().trim();
+
+    if (clean.indexOf('emerg') !== -1 || clean.indexOf('stat') !== -1 || clean.indexOf('critical') !== -1 || clean.indexOf('esi 1') !== -1 || clean.indexOf('esi 2') !== -1) {
+      return 'emergency';
+    }
+    if (clean.indexOf('non_urg') !== -1 || clean.indexOf('non-urg') !== -1 || clean.indexOf('rout') !== -1 || clean.indexOf('standard') !== -1 || clean.indexOf('esi 4') !== -1 || clean.indexOf('esi 5') !== -1 || clean.indexOf('low') !== -1) {
+      return 'routine';
+    }
+    if (clean.indexOf('urg') !== -1 || clean.indexOf('amber') !== -1 || clean.indexOf('esi 3') !== -1 || clean.indexOf('priority') !== -1) {
+      return 'urgent';
+    }
+    return 'unknown';
+  }
+
+  var WORKFLOW_DEFINITIONS = {
+    emergency: {
+      category: 'emergency',
+      badge: '🚨 EMERGENCY RESPONSE PROTOCOL',
+      badgeClass: 'emergency',
+      accentColor: 'var(--emergency-red)',
+      borderAccent: 'var(--emergency-red)',
+      priorityTag: 'Patient Safety Above All',
+      targetResponse: 'Target: ≤ 15 min Specialist Response',
+      description: 'When AI detects life-threatening or acute hemodynamic risk, n8n executes the automated emergency response protocol.',
+      steps: [
+        {
+          icon: '🚨',
+          title: 'Alert Emergency Team',
+          channel: 'Slack #emergency-trauma',
+          desc: 'Dispatches STAT patient telemetry, vital signs, and resuscitation bay directive to trauma team.',
+          status: '✓ Dispatched by n8n Router'
+        },
+        {
+          icon: '📩',
+          title: 'Send Emergency Instructions',
+          channel: 'Patient / Care Team',
+          desc: 'Transmits immediate pre-arrival emergency guidance and safety precautions.',
+          status: '✓ Dispatched by n8n Router'
+        },
+        {
+          icon: '👨‍⚕️',
+          title: 'Alert On-Call Doctor',
+          channel: 'On-Call Attending MD',
+          desc: 'Directly pages designated on-call cardiology / trauma specialist with clinical intake summary.',
+          status: '✓ Dispatched by n8n Router'
+        }
+      ]
+    },
+    urgent: {
+      category: 'urgent',
+      badge: '⚡ URGENT SCHEDULING PATH',
+      badgeClass: 'urgent',
+      accentColor: 'var(--urgent-amber)',
+      borderAccent: 'var(--urgent-amber)',
+      priorityTag: 'High-Priority Scheduling',
+      targetResponse: 'Target: 24–48 Hour Evaluation Window',
+      description: 'For cases requiring expedited physician assessment, n8n initiates the urgent ambulatory fast-track path.',
+      steps: [
+        {
+          icon: '⚡',
+          title: 'Notify Front Desk',
+          channel: 'Front Desk & Nursing Team',
+          desc: 'Alerts front desk and nursing supervisor to fast-track check-in and priority room allocation.',
+          status: '✓ Dispatched by n8n Router'
+        },
+        {
+          icon: '📋',
+          title: 'Send Patient Confirmation',
+          channel: 'Patient Urgent Care Notice',
+          desc: 'Sends patient urgent care appointment confirmation with required documentation checklist.',
+          status: '✓ Dispatched by n8n Router'
+        }
+      ]
+    },
+    routine: {
+      category: 'routine',
+      badge: '📅 ROUTINE SCHEDULING PATH',
+      badgeClass: 'routine',
+      accentColor: 'var(--routine-green)',
+      borderAccent: 'var(--routine-green)',
+      priorityTag: 'Standard Outpatient Scheduling',
+      targetResponse: 'Target: Standard Outpatient Slot (1–2 Weeks)',
+      description: 'For preventive and standard clinical visits, n8n orchestrates standard queue booking and patient confirmation.',
+      steps: [
+        {
+          icon: '📅',
+          title: 'Notify Scheduler',
+          channel: 'Outpatient Scheduling Desk',
+          desc: 'Places appointment request into standard queue for routine slot allocation.',
+          status: '✓ Dispatched by n8n Router'
+        },
+        {
+          icon: '✉️',
+          title: 'Send Patient Confirmation',
+          channel: 'Patient Confirmation Email',
+          desc: 'Transmits standard appointment confirmation with intake instructions and preparation notes.',
+          status: '✓ Dispatched by n8n Router'
+        }
+      ]
+    }
+  };
+
+  function renderAutomationWorkflow(containerEl, record) {
+    if (!containerEl) return;
+
+    if (!record || !record.triage) {
+      containerEl.innerHTML = '';
+      return;
+    }
+
+    var rawCategory = record.triage.urgency_level || record.triage.urgency || '';
+    var category = normalizeTriageCategory(rawCategory);
+    var def = WORKFLOW_DEFINITIONS[category];
+
+    if (!def) {
+      containerEl.innerHTML = [
+        '<div class="neu-card" style="padding: 1.25rem; border-left: 4px solid var(--text-muted);">',
+        '  <div style="font-size:0.85rem; font-weight:700; color:var(--text-muted);">',
+        '    ⚙️ Automation Routing: Unclassified triage route (' + (rawCategory || 'Unknown') + ').',
+        '  </div>',
+        '</div>'
+      ].join('');
+      return;
+    }
+
+    var isEmergActive = category === 'emergency';
+    var isUrgActive = category === 'urgent';
+    var isRoutActive = category === 'routine';
+
+    var stepsHtml = def.steps.map(function (step, idx) {
+      var stepCard = [
+        '<div class="automation-node-card">',
+        '  <div style="display:flex; align-items:flex-start; gap:0.75rem;">',
+        '    <div class="automation-node-icon" style="font-size:1.35rem; width:38px; height:38px; border-radius:10px; background:var(--neu-surface); display:flex; align-items:center; justify-content:center; box-shadow:var(--neu-flat-sm); flex-shrink:0;">' + step.icon + '</div>',
+        '    <div style="flex:1; min-width:0;">',
+        '      <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:0.3rem;">',
+        '        <h4 style="font-size:0.88rem; font-weight:900; color:var(--text-main); margin:0;">' + step.title + '</h4>',
+        '        <span style="font-size:0.68rem; font-weight:800; font-family:var(--font-mono); color:var(--sky-blue); background:rgba(2, 132, 199, 0.08); padding:0.15rem 0.45rem; border-radius:4px;">' + step.channel + '</span>',
+        '      </div>',
+        '      <p style="font-size:0.76rem; color:var(--text-sub); margin-top:0.3rem; line-height:1.4;">' + step.desc + '</p>',
+        '      <div style="margin-top:0.45rem; display:flex; align-items:center; gap:0.35rem;">',
+        '        <span style="font-size:0.68rem; font-weight:800; color:' + def.accentColor + '; display:inline-flex; align-items:center; gap:0.25rem;">',
+        '          <span style="width:6px; height:6px; border-radius:50%; background:' + def.accentColor + '; display:inline-block;"></span>',
+        '          ' + step.status,
+        '        </span>',
+        '      </div>',
+        '    </div>',
+        '  </div>',
+        '</div>'
+      ].join('');
+
+      var connector = (idx < def.steps.length - 1) ? [
+        '<div class="automation-pipeline-connector" aria-hidden="true">',
+        '  <span class="connector-arrow-desktop">➔</span>',
+        '  <span class="connector-arrow-mobile">⬇</span>',
+        '</div>'
+      ].join('') : '';
+
+      return stepCard + connector;
+    }).join('');
+
+    var html = [
+      '<section class="neu-card automation-workflow-card ' + def.category + '" aria-label="Clinical Automation Workflow Execution" style="border-left: 6px solid ' + def.borderAccent + '; padding: 1.5rem; display:flex; flex-direction:column; gap:1.15rem; background: var(--neu-surface);">',
+      '  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem; padding-bottom:0.75rem; border-bottom:1px solid rgba(184, 196, 208, 0.4);">',
+      '    <div>',
+      '      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">',
+      '        <span class="neu-acuity-badge ' + def.badgeClass + '" style="font-size:0.78rem; padding:0.3rem 0.85rem;">',
+      '          <span class="led-dot ' + def.badgeClass + '"></span>' + def.badge,
+      '        </span>',
+      '        <span style="font-size:0.75rem; font-weight:800; color:var(--teal-primary); background:rgba(0, 121, 140, 0.08); padding:0.25rem 0.6rem; border-radius:6px; border:1px solid rgba(0, 121, 140, 0.2);">',
+      '          ⚡ N8N AUTOMATION PIPELINE',
+      '        </span>',
+      '      </div>',
+      '      <div style="font-size:0.82rem; color:var(--text-sub); margin-top:0.35rem; line-height:1.4;">',
+      '        <strong>' + def.priorityTag + '</strong> • <span style="color:var(--text-muted);">' + def.targetResponse + '</span>',
+      '      </div>',
+      '    </div>',
+      '    <div class="workflow-routes-bar" style="display:flex; gap:0.4rem; flex-wrap:wrap; align-items:center;">',
+      '      <span class="neu-badge ' + (isEmergActive ? 'emergency' : '') + '" style="font-size:0.68rem; padding:0.25rem 0.55rem; opacity:' + (isEmergActive ? '1' : '0.45') + '; font-weight:' + (isEmergActive ? '900' : '600') + ';">' + (isEmergActive ? '● ' : '') + '🔴 Emergency Protocol</span>',
+      '      <span class="neu-badge ' + (isUrgActive ? 'urgent' : '') + '" style="font-size:0.68rem; padding:0.25rem 0.55rem; opacity:' + (isUrgActive ? '1' : '0.45') + '; font-weight:' + (isUrgActive ? '900' : '600') + ';">' + (isUrgActive ? '● ' : '') + '⚡ Urgent Path</span>',
+      '      <span class="neu-badge ' + (isRoutActive ? 'routine' : '') + '" style="font-size:0.68rem; padding:0.25rem 0.55rem; opacity:' + (isRoutActive ? '1' : '0.45') + '; font-weight:' + (isRoutActive ? '900' : '600') + ';">' + (isRoutActive ? '● ' : '') + '📅 Routine Path</span>',
+      '    </div>',
+      '  </div>',
+      '  <div style="font-size:0.8rem; color:var(--text-main); line-height:1.5; background:var(--neu-surface); padding:0.75rem 1rem; border-radius:10px; box-shadow:var(--neu-inset-sm);">',
+      '    <span style="font-weight:800; color:var(--teal-primary); text-transform:uppercase; font-size:0.72rem; letter-spacing:0.04em;">Selected Care Automation:</span> ' + def.description,
+      '  </div>',
+      '  <div class="automation-pipeline-container">',
+      stepsHtml,
+      '  </div>',
+      '</section>'
+    ].join('');
+
+    containerEl.innerHTML = html;
+  }
+
   function renderHomeView(containerEl) {
     var isEvaluated = !!state.activeIntake;
 
@@ -1904,7 +2105,7 @@
 
     renderHeaderNav(headerMount);
     if (sidebarMount) renderSidebar(sidebarMount);
-    if (modalMount) renderN8nModal(modalMount);
+    // Modal removed
 
     var updateRoute = function () {
       renderHeaderNav(headerMount);
