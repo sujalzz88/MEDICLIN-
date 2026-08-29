@@ -35,7 +35,7 @@ export function renderN8nModal(containerEl) {
                 Active Webhook Gateway:
               </span>
               <span id="modalActiveModeBadge" class="neu-badge urgent" style="font-size:0.7rem; padding:0.2rem 0.6rem;">
-                🧪 N8N TEST WEBHOOK ACTIVE
+                🏭 N8N PRODUCTION GATEWAY ACTIVE
               </span>
             </div>
 
@@ -44,7 +44,7 @@ export function renderN8nModal(containerEl) {
             </div>
             
             <div style="font-size:0.72rem; color:var(--text-muted); line-height:1.4;">
-              💡 <em>Ensure your n8n workflow editor is set to <strong>"Listen for test event"</strong> / <strong>"Test workflow"</strong> when submitting test intakes.</em>
+              💡 <em>Ensure the workflow is set to <strong>Active</strong> in your n8n Cloud editor.</em>
             </div>
           </div>
 

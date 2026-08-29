@@ -1,11 +1,11 @@
 /* ==========================================================================
    MEDICLIN N8N API CLIENT (N8N-CLIENT.JS)
    Centralized bi-directional webhook gateway for AI Medical Triage & Planning
-   Configured to use the centralized n8n TEST Webhook Endpoint
+   Configured to use the centralized n8n PRODUCTION Webhook Endpoint
    ========================================================================== */
 
-export const N8N_TEST_WEBHOOK_URL = 'https://aryanna.app.n8n.cloud/webhook-test/a5b3b9e3-267f-406f-a37b-aabeff9b50d0';
-export const N8N_WEBHOOK_URL = N8N_TEST_WEBHOOK_URL;
+export const N8N_PRODUCTION_WEBHOOK_URL = 'https://aryanna.app.n8n.cloud/webhook/a5b3b9e3-267f-406f-a37b-aabeff9b50d0';
+export const N8N_WEBHOOK_URL = N8N_PRODUCTION_WEBHOOK_URL;
 
 const REQUEST_TIMEOUT_MS = 60000; // 60s for full LLM analysis & triage pipeline
 
@@ -48,7 +48,7 @@ export const SYNTHETIC_TEST_PATIENT = {
 };
 
 /**
- * Retrieve active webhook URL - strictly returns the centralized TEST URL
+ * Retrieve active webhook URL - strictly returns the centralized PRODUCTION URL
  */
 export function getActiveWebhookUrl() {
   return N8N_WEBHOOK_URL;
@@ -209,11 +209,13 @@ export function normalizeN8nResponse(data, rawSubmissionPayload) {
 }
 
 /**
- * Submit payload to the centralized n8n TEST Webhook
+ * Submit payload to the centralized n8n PRODUCTION Webhook
  */
 export async function submitToN8n(rawFormData, options = {}) {
   const payload = formatN8nPayload(rawFormData, options.workflowType);
-  const targetUrl = N8N_WEBHOOK_URL;
+  const targetUrl = N8N_PRODUCTION_WEBHOOK_URL;
+
+  console.info('[MediClin] Dispatching HTTP POST to n8n Production Webhook:', targetUrl);
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -236,11 +238,11 @@ export async function submitToN8n(rawFormData, options = {}) {
       let errorJson = null;
       try { errorJson = JSON.parse(errorText); } catch (e) {}
 
-      if (response.status === 404 && (errorJson?.message?.includes('not registered') || errorText.includes('not registered'))) {
+      if (response.status === 404 && (errorJson?.message?.includes('not registered') || errorText.includes('not registered') || errorJson?.hint?.includes('active'))) {
         return {
           success: false,
-          errorType: N8N_ERROR_TYPES.TEST_LISTENER_NOT_ACTIVE,
-          error: "The n8n TEST webhook is not listening. In your n8n Cloud editor, click 'Listen for test event' or 'Execute workflow' then try again.",
+          errorType: N8N_ERROR_TYPES.PRODUCTION_WORKFLOW_INACTIVE,
+          error: "The n8n Production Webhook is not currently active. In your n8n Cloud editor, toggle the workflow switch in the top-right to 'Active'.",
           status: 404,
           url: targetUrl,
           rawPayload: payload
