@@ -11,13 +11,15 @@ import { evaluateTriage } from '../triage-engine.js';
 import { clinicalAudio } from './audio.js';
 
 export function renderIntakeForm(containerEl, onSubmitCallback) {
+  if (!containerEl) return;
+
   const currentEndpoint = getActiveWebhookUrl();
   const isTestEndpoint = currentEndpoint.includes('/webhook-test/');
 
   const html = `
     <div class="neu-card" style="padding: 1.75rem;">
       
-      <!-- Form Header Matching Image 1 -->
+      <!-- Form Header Matching Image 2 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap:wrap; gap:0.75rem;">
         <div>
           <h2 style="font-size: 1.15rem; font-weight: 900; color: var(--teal-primary); display:flex; align-items:center; gap:0.5rem;">
@@ -182,12 +184,15 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
     });
   }
 
-  painSlider.addEventListener('input', (e) => {
-    painDisplay.textContent = `${e.target.value} / 10`;
-  });
+  if (painSlider) {
+    painSlider.addEventListener('input', (e) => {
+      if (painDisplay) painDisplay.textContent = `${e.target.value} / 10`;
+    });
+  }
 
   // Populate helper function
   const fillForm = (data) => {
+    if (!data || !form) return;
     Object.keys(data).forEach(key => {
       const field = form.querySelector(`[name="${key}"]`);
       if (field) field.value = data[key];
@@ -196,18 +201,25 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
   };
 
   // Preload initial case (Eleanor Vance)
-  if (state.activeIntake && state.activeIntake.patient) {
-    fillForm(state.activeIntake.patient);
-  } else {
-    fillForm(INITIAL_PRESETS.EMERGENCY_CARDIAC);
+  try {
+    if (state.activeIntake && state.activeIntake.patient) {
+      fillForm(state.activeIntake.patient);
+    } else if (INITIAL_PRESETS && INITIAL_PRESETS.EMERGENCY_CARDIAC) {
+      fillForm(INITIAL_PRESETS.EMERGENCY_CARDIAC);
+    }
+  } catch (e) {
+    console.error('[MediClin] Preload form error:', e);
   }
 
   const hideStatus = () => {
-    statusContainer.style.display = 'none';
-    statusContainer.innerHTML = '';
+    if (statusContainer) {
+      statusContainer.style.display = 'none';
+      statusContainer.innerHTML = '';
+    }
   };
 
   const showLoading = (msg) => {
+    if (!statusContainer) return;
     statusContainer.style.display = 'block';
     statusContainer.innerHTML = `
       <div class="neu-card-recessed" style="padding:0.85rem 1.25rem; display:flex; align-items:center; gap:0.75rem; color:var(--teal-primary); font-size:0.85rem; font-weight:700;">
@@ -223,6 +235,7 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
   };
 
   const showErrorState = (result, intakeData) => {
+    if (!statusContainer) return;
     statusContainer.style.display = 'block';
     const isInactive = result.isWorkflowInactive;
     const isTestInactive = result.isTestListenerInactive;
@@ -325,13 +338,15 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
     state.addIntake(completeRecord);
 
     // Audio Feedback
-    if (localTriage.urgency_level === 'emergency') {
-      clinicalAudio.playEmergencySiren();
-    } else if (localTriage.urgency_level === 'urgent') {
-      clinicalAudio.playUrgentBeep();
-    } else {
-      clinicalAudio.playChime();
-    }
+    try {
+      if (localTriage.urgency_level === 'emergency') {
+        clinicalAudio.playEmergencySiren();
+      } else if (localTriage.urgency_level === 'urgent') {
+        clinicalAudio.playUrgentBeep();
+      } else {
+        clinicalAudio.playChime();
+      }
+    } catch (e) {}
 
     if (onSubmitCallback) onSubmitCallback(completeRecord);
   };
@@ -340,10 +355,9 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
     if (isSubmitting) return;
     isSubmitting = true;
 
-    // UI Loading state
-    submitBtn.disabled = true;
-    submitBtnIcon.textContent = '⏳';
-    submitBtnText.textContent = 'TRANSMITTING TO N8N AI TRIAGE...';
+    if (submitBtn) submitBtn.disabled = true;
+    if (submitBtnIcon) submitBtnIcon.textContent = '⏳';
+    if (submitBtnText) submitBtnText.textContent = 'TRANSMITTING TO N8N AI TRIAGE...';
     showLoading('Transmitting clinical payload to n8n webhook and running AI medical triage pipeline...');
 
     try {
@@ -363,18 +377,19 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
         state.addIntake(completeRecord);
 
         // Audio Feedback
-        if (triageResult.urgency_level === 'emergency') {
-          clinicalAudio.playEmergencySiren();
-        } else if (triageResult.urgency_level === 'urgent') {
-          clinicalAudio.playUrgentBeep();
-        } else {
-          clinicalAudio.playChime();
-        }
+        try {
+          if (triageResult.urgency_level === 'emergency') {
+            clinicalAudio.playEmergencySiren();
+          } else if (triageResult.urgency_level === 'urgent') {
+            clinicalAudio.playUrgentBeep();
+          } else {
+            clinicalAudio.playChime();
+          }
+        } catch (e) {}
 
         if (onSubmitCallback) onSubmitCallback(completeRecord);
 
       } else {
-        // n8n returned error / HTTP 404 / inactive / timeout
         showErrorState(result, intakeData);
       }
     } catch (err) {
@@ -386,22 +401,24 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
       }, intakeData);
     } finally {
       isSubmitting = false;
-      submitBtn.disabled = false;
-      submitBtnIcon.textContent = '⚙️';
-      submitBtnText.textContent = 'PROCESS AI TRIAGE ASSESSMENT';
+      if (submitBtn) submitBtn.disabled = false;
+      if (submitBtnIcon) submitBtnIcon.textContent = '⚙️';
+      if (submitBtnText) submitBtnText.textContent = 'PROCESS AI TRIAGE ASSESSMENT';
     }
   };
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (isSubmitting) return;
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (isSubmitting) return;
 
-    const formData = new FormData(form);
-    const intakeData = {};
-    formData.forEach((value, key) => {
-      intakeData[key] = value;
+      const formData = new FormData(form);
+      const intakeData = {};
+      formData.forEach((value, key) => {
+        intakeData[key] = value;
+      });
+
+      await processSubmission(intakeData);
     });
-
-    await processSubmission(intakeData);
-  });
+  }
 }
