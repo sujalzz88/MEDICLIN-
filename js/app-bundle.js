@@ -444,6 +444,7 @@
     this.intakes = [];
     this.activeIntake = null;
     this.listeners = [];
+    this.initSampleData();
   };
 
   AppState.prototype.addIntake = function (intakeWithTriage) {
@@ -472,11 +473,49 @@
     });
   };
 
-  AppState.prototype.getEmergencyQueue = function () {
-    return this.intakes.filter(function (i) { return i.triage.urgency_level === 'emergency'; });
+  AppState.prototype.initSampleData = function () {
+    var stored = null;
+    try {
+      if (typeof localStorage !== 'undefined') {
+        stored = localStorage.getItem('mediclin_intakes_n8n');
+      }
+    } catch (e) {}
+    if (stored) {
+      try {
+        var parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          this.intakes = parsed.filter(Boolean).map(function (item) {
+            if (item && item.patient && !item.triage) {
+              item.triage = evaluateTriage(item.patient);
+            }
+            return item;
+          });
+        }
+      } catch (e) {
+        this.intakes = [];
+      }
+    }
   };
+
+  AppState.prototype.getEmergencyQueue = function () {
+    if (!Array.isArray(this.intakes)) return [];
+    return this.intakes.filter(function (i) {
+      return i && i.triage && (i.triage.urgency_level === 'emergency' || (i.triage.urgency_level || '').toLowerCase().indexOf('emerg') !== -1);
+    });
+  };
+
   AppState.prototype.getUrgentQueue = function () {
-    return this.intakes.filter(function (i) { return i.triage.urgency_level === 'urgent'; });
+    if (!Array.isArray(this.intakes)) return [];
+    return this.intakes.filter(function (i) {
+      return i && i.triage && (i.triage.urgency_level === 'urgent' || (i.triage.urgency_level || '').toLowerCase().indexOf('urg') !== -1);
+    });
+  };
+
+  AppState.prototype.getRoutineQueue = function () {
+    if (!Array.isArray(this.intakes)) return [];
+    return this.intakes.filter(function (i) {
+      return i && i.triage && (i.triage.urgency_level === 'routine' || i.triage.urgency_level === 'non_urgent' || (i.triage.urgency_level || '').toLowerCase().indexOf('rout') !== -1);
+    });
   };
 
   var state = new AppState();
@@ -1908,7 +1947,8 @@
   }
 
   function renderHomeView(containerEl) {
-    var isEvaluated = !!state.activeIntake;
+    if (!containerEl) return;
+    var isEvaluated = Boolean(state.activeIntake && state.activeIntake.triage);
 
     var html = [
       '<div style="display:flex; flex-direction:column; gap:1.35rem;">',
@@ -1919,6 +1959,7 @@
       '      <div id="patientStatusMount"></div>',
       '      <div id="patientAlertsMount"></div>',
       '    </div>',
+      '    <div id="automationWorkflowMount"></div>',
       '    <div id="providerBriefMount"></div>',
       '  </div>',
       '</div>'
@@ -1931,24 +1972,35 @@
     var assessSection = containerEl.querySelector('#assessmentSectionMount');
     var statusMount = containerEl.querySelector('#patientStatusMount');
     var alertsMount = containerEl.querySelector('#patientAlertsMount');
+    var workflowMount = containerEl.querySelector('#automationWorkflowMount');
     var briefMount = containerEl.querySelector('#providerBriefMount');
 
-    renderWorkflowStepper(stepperMount, isEvaluated ? 2 : 1);
+    try { if (stepperMount) renderWorkflowStepper(stepperMount, isEvaluated ? 2 : 1); } catch (e) {}
 
-    if (isEvaluated) {
-      renderPatientStatusOverview(statusMount, state.activeIntake);
-      renderPatientAlerts(alertsMount, state.activeIntake);
-      renderProviderBrief(briefMount, state.activeIntake);
+    try {
+      if (formMount) {
+        renderIntakeForm(formMount, function (newRecord) {
+          if (assessSection) assessSection.style.display = 'flex';
+          try { if (stepperMount) renderWorkflowStepper(stepperMount, 2); } catch (e) {}
+          try { if (statusMount) renderPatientStatusOverview(statusMount, newRecord); } catch (e) {}
+          try { if (alertsMount) renderPatientAlerts(alertsMount, newRecord); } catch (e) {}
+          try { if (workflowMount) renderAutomationWorkflow(workflowMount, newRecord); } catch (e) {}
+          try { if (briefMount) renderProviderBrief(briefMount, newRecord); } catch (e) {}
+          if (assessSection) {
+            assessSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[MediClin Bundle] Intake form error:', e);
     }
 
-    renderIntakeForm(formMount, function (newRecord) {
-      assessSection.style.display = 'flex';
-      renderWorkflowStepper(stepperMount, 2);
-      renderPatientStatusOverview(statusMount, newRecord);
-      renderPatientAlerts(alertsMount, newRecord);
-      renderProviderBrief(briefMount, newRecord);
-      assessSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    if (isEvaluated && state.activeIntake) {
+      try { if (statusMount) renderPatientStatusOverview(statusMount, state.activeIntake); } catch (e) {}
+      try { if (alertsMount) renderPatientAlerts(alertsMount, state.activeIntake); } catch (e) {}
+      try { if (workflowMount) renderAutomationWorkflow(workflowMount, state.activeIntake); } catch (e) {}
+      try { if (briefMount) renderProviderBrief(briefMount, state.activeIntake); } catch (e) {}
+    }
   }
 
   function renderEmergencyView(containerEl) {
