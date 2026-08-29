@@ -1,0 +1,198 @@
+/* ==========================================================================
+   CLINICAL THEME CSS - HOSPITAL WORKSTATION DASHBOARD
+   Design System Tokens inspired by Clinical Workstation Display
+   ========================================================================== */
+
+:root {
+  /* Surface & Workspace Colors */
+  --workspace-bg: #EAF6F9;
+  --card-bg: #FFFFFF;
+  --card-border: #D1E9EE;
+  --surface-subtle: #F1F8FA;
+  --surface-recessed: #E1EFF3;
+
+  /* Primary Identity & Accent Colors */
+  --clinical-teal: #00798C;
+  --sky-blue: #0284C7;
+  --sky-blue-hover: #0369A1;
+  --sky-light: #E0F2FE;
+  --sky-light-border: #BAE6FD;
+
+  /* Routine & Healthcare Accents */
+  --routine-green: #556B2F;
+  --routine-green-bg: #F0F4EC;
+  --routine-green-border: #CFDCBC;
+
+  /* Restrained Semantic Alert Colors */
+  --emergency-red: #DC2626;
+  --emergency-bg: #FEF2F2;
+  --emergency-border: #FCA5A5;
+
+  --urgent-amber: #D97706;
+  --urgent-bg: #FFFBEB;
+  --urgent-border: #FDE68A;
+
+  /* Neutral Slate Text & Borders */
+  --text-primary: #0F172A;
+  --text-secondary: #334155;
+  --text-muted: #64748B;
+
+  /* Shadows & Borders */
+  --shadow-subtle: 0 1px 3px 0 rgba(0, 121, 140, 0.05), 0 1px 2px -1px rgba(0, 121, 140, 0.03);
+  --shadow-card: 0 4px 6px -1px rgba(0, 121, 140, 0.04), 0 2px 4px -2px rgba(0, 121, 140, 0.02);
+
+  /* Radius & Typography */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+}
+
+/* Reset & Global Canvas Setup */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--workspace-bg);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Workstation Shell Layout */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main-body {
+  display: flex;
+  flex: 1;
+}
+
+/* Modular Dashboard Cards */
+.dash-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.dash-card-title {
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--clinical-teal);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Clinical Buttons */
+.clinical-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.clinical-btn:hover {
+  background-color: var(--surface-subtle);
+  border-color: var(--sky-blue);
+  color: var(--sky-blue-hover);
+}
+
+.clinical-btn-primary {
+  background-color: var(--sky-blue);
+  color: #FFFFFF;
+  border-color: var(--sky-blue-hover);
+}
+
+.clinical-btn-primary:hover {
+  background-color: var(--sky-blue-hover);
+  color: #FFFFFF;
+}
+
+.clinical-btn-olive {
+  background-color: var(--routine-green);
+  color: #FFFFFF;
+  border-color: #465926;
+}
+
+.clinical-btn-olive:hover {
+  background-color: #465926;
+  color: #FFFFFF;
+}
+
+/* Status Badges */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.725rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.status-pill.emergency {
+  background-color: var(--emergency-bg);
+  color: var(--emergency-red);
+  border-color: var(--emergency-border);
+}
+
+.status-pill.urgent {
+  background-color: var(--urgent-bg);
+  color: var(--urgent-amber);
+  border-color: var(--urgent-border);
+}
+
+.status-pill.routine, .status-pill.non_urgent {
+  background-color: var(--routine-green-bg);
+  color: var(--routine-green);
+  border-color: var(--routine-green-border);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: currentColor;
+}

@@ -1,0 +1,676 @@
+/* ==========================================================================
+   COMPONENTS CSS - MODULAR CARDS, GAUGES, ALERTS & FORMS
+   ========================================================================== */
+
+/* Circular Priority Score Gauge (0-100) Ring Indicator */
+.priority-ring-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.priority-svg-box {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.priority-center-val {
+  position: absolute;
+  text-align: center;
+}
+
+.priority-score-number {
+  font-size: 2.1rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.priority-score-label {
+  font-size: 0.675rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 0.2rem;
+}
+
+/* Patient Alerts Card */
+.alert-item-box {
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.alert-item-box.red-flag {
+  background-color: var(--emergency-bg);
+  border-color: var(--emergency-border);
+}
+
+.alert-item-header {
+  font-size: 0.775rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.alert-item-header.red-flag { color: var(--emergency-red); }
+.alert-item-header.critical { color: var(--urgent-amber); }
+.alert-item-header.reasoning { color: var(--clinical-teal); }
+
+.alert-item-content {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+
+/* Clinical Provider Brief Grid Cells */
+/* Clinical Provider Brief Grid Cells */
+.brief-grid-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.brief-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .brief-grid { grid-template-columns: 1fr; }
+}
+
+.brief-cell {
+  background: var(--neu-surface);
+  border-radius: 12px;
+  box-shadow: inset 2px 2px 5px var(--neu-shadow-dark), inset -2px -2px 5px var(--neu-shadow-light);
+  padding: clamp(0.75rem, 2.5vw, 1.1rem);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.brief-cell-label, .brief-cell-heading {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--teal-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.35rem;
+}
+
+.brief-cell-val, .brief-cell-text {
+  font-size: 0.84rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* Responsive Alerts Gauge Split */
+.alerts-gauge-split {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.status-footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.home-row2-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.35rem;
+}
+
+@media (max-width: 1023px) {
+  .home-row2-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .alerts-gauge-split {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .status-footer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Workflow Stage Banner Card */
+.workflow-track-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 0;
+}
+
+.workflow-node {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+.workflow-node-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: var(--sky-blue);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workflow-node-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.workflow-arrow-sep {
+  color: var(--sky-blue);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+/* 14-Field Form Styling */
+.form-grid-2col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
+}
+
+.form-grid-4col {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+}
+
+.form-grid-demographics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .form-grid-2col { grid-template-columns: 1fr; }
+  .form-grid-4col { grid-template-columns: repeat(2, 1fr); }
+  .form-grid-demographics { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 380px) {
+  .form-grid-4col { grid-template-columns: 1fr; }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+}
+
+.form-label {
+  font-size: 0.775rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.form-input, .form-textarea, .form-select {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.85rem;
+  min-height: 46px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .form-input, .form-textarea, .form-select, .neu-input, .neu-select, .neu-textarea {
+    font-size: 16px !important; /* Prevents unwanted iOS auto-zoom on touch */
+    min-height: 48px !important;
+  }
+}
+
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--sky-blue);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Pain Scale Slider Box */
+.pain-box {
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+}
+
+.pain-val-tag {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--clinical-teal);
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+
+/* N8N Modal Backdrop */
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  padding: clamp(8px, 2vw, 20px);
+}
+
+.modal-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-dialog {
+  background-color: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px -5px rgba(0, 121, 140, 0.3);
+  width: min(780px, calc(100vw - 20px));
+  max-width: 780px;
+  max-height: min(88vh, calc(100vh - 24px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--card-border);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: clamp(0.75rem, 2vw, 1.1rem) clamp(1rem, 2.5vw, 1.5rem);
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--surface-subtle);
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: clamp(0.85rem, 2.5vw, 1.35rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.json-box {
+  background-color: #0F172A;
+  color: #38BDF8;
+  font-family: var(--font-mono);
+  font-size: 0.825rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ==========================================================================
+   INTEGRATED PATIENT JACKET, VITALS PODS & ECG WAVE STYLING
+   ========================================================================== */
+.patient-jacket-master {
+  background: linear-gradient(145deg, #FFFFFF 0%, #E6EDF2 100%);
+  border-radius: 14px;
+  box-shadow: var(--neu-flat-sm);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.patient-jacket-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(184, 196, 208, 0.4);
+}
+
+.patient-profile-block {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.patient-jacket-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #008DA3 0%, #005A69 100%);
+  color: #FFFFFF;
+  font-size: 1.1rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(0, 121, 140, 0.35);
+  border: 1.5px solid #FFFFFF;
+  flex-shrink: 0;
+}
+
+.patient-jacket-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--text-main);
+  line-height: 1.2;
+}
+
+.patient-jacket-demog {
+  font-size: 0.78rem;
+  color: var(--text-sub);
+  margin-top: 0.15rem;
+}
+
+.patient-jacket-meta-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.patient-meta-pill {
+  background: var(--neu-surface);
+  border-radius: 8px;
+  box-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
+  padding: 0.45rem 0.75rem;
+}
+
+.patient-meta-pill-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--teal-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.patient-meta-pill-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-top: 0.1rem;
+}
+
+/* Vitals Typographic Grid */
+.vitals-typographic-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.85rem;
+  margin: 0.75rem 0 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .vitals-typographic-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.vital-stat-cell {
+  background: var(--neu-surface);
+  border-radius: 12px;
+  box-shadow: var(--neu-flat-sm);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  padding: 0.85rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.vital-stat-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--teal-primary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.vital-stat-val {
+  font-size: 1.25rem;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-main);
+  margin-top: 0.2rem;
+}
+
+.vital-stat-val.alert-stat {
+  color: var(--emergency-red);
+}
+
+.vital-stat-sub {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.1rem;
+}
+
+.ecg-sparkline {
+  width: 100%;
+  height: 14px;
+  margin-top: 0.35rem;
+  opacity: 0.65;
+}
+
+/* Red Flag Box */
+.red-flag-clean-box {
+  padding: 1rem 1.25rem;
+  background: var(--emergency-bg);
+  border-radius: 12px;
+  border-left: 4px solid var(--emergency-red);
+  box-shadow: var(--neu-flat-sm);
+  border-top: 1px solid #FCA5A5;
+  border-right: 1px solid #FCA5A5;
+  border-bottom: 1px solid #FCA5A5;
+  margin-bottom: 1.25rem;
+}
+
+.red-flag-clean-title {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--emergency-red);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.red-flag-clean-list {
+  padding-left: 1.2rem;
+  font-size: 0.82rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+/* Protocols 3-col Grid */
+.protocols-clean-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+@media (max-width: 860px) {
+  .protocols-clean-grid { grid-template-columns: 1fr; }
+}
+
+.protocol-box {
+  background: var(--neu-surface);
+  border-radius: 12px;
+  box-shadow: var(--neu-flat-sm);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  padding: 0.95rem;
+}
+
+.protocol-clean-header {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--teal-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid rgba(184, 196, 208, 0.4);
+}
+
+.protocol-clean-items {
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+  line-height: 1.5;
+  padding: 0;
+}
+
+.protocol-clean-items li {
+  margin-bottom: 0.35rem;
+  position: relative;
+  padding-left: 0.75rem;
+}
+
+.protocol-clean-items li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--sky-blue);
+  font-weight: 800;
+}
+
+/* Time Telemetry Box */
+.clock-telemetry {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--teal-primary);
+  background: var(--neu-surface);
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  box-shadow: inset 2px 2px 4px var(--neu-shadow-dark), inset -2px -2px 4px var(--neu-shadow-light);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+/* ==========================================================================
+   HORIZONTAL WORKFLOW STEPPER CARD (MATCHING IMAGE 2 EXACTLY)
+   ========================================================================== */
+.workflow-stepper-card {
+  background: var(--neu-surface);
+  border-radius: 16px;
+  box-shadow: var(--neu-flat-sm);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  padding: 0.95rem clamp(0.85rem, 2vw, 1.75rem) !important;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 1.25rem !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.workflow-stepper-card::-webkit-scrollbar {
+  display: none;
+}
+
+.workflow-step-item {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+}
+
+.workflow-step-num {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  flex-shrink: 0 !important;
+  color: #FFFFFF !important;
+  background-color: var(--sky-blue) !important;
+  box-shadow: 0 2px 5px rgba(2, 132, 199, 0.35);
+}
+
+.workflow-step-title {
+  font-size: clamp(0.75rem, 1.5vw, 0.84rem) !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  white-space: nowrap !important;
+}
+
+.workflow-step-arrow {
+  color: var(--sky-blue) !important;
+  font-size: 0.9rem !important;
+  font-weight: 800 !important;
+  padding: 0 0.4rem !important;
+  flex-shrink: 0 !important;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .workflow-stepper-card {
+    justify-content: flex-start !important;
+    gap: 0.65rem;
+    padding: 0.75rem 1rem !important;
+  }
+}
+

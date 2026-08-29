@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>MediClin | AI Medical Intake & Smart Triage Workstation</title>
+  
+  <!-- Clinical Workspace Meta Tags -->
+  <meta name="description" content="MediClin is an automation suite for clinical support, medical intake triage, provider briefs, and emergency detection connected to automated clinical pipelines." />
+  <meta name="keywords" content="MediClin, AI Medical Triage, Hospital Workstation, Emergency Detection, Provider Briefs, Clinical Intake Automation" />
+  <meta name="theme-color" content="#00798C" />
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+  <!-- Clinical Workstation Dashboard Stylesheets -->
+  <link rel="stylesheet" href="css/neumorphism.css" />
+  <link rel="stylesheet" href="css/clinical-theme.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+</head>
+<body>
+
+  <!-- Mobile Sidebar Drawer Backdrop Overlay -->
+  <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+  <!-- Clinical Workstation Application Shell -->
+  <div class="app-shell">
+    
+    <!-- Top Clinical Header Bar with Live Precision Clock & MediClin Emblem -->
+    <div id="headerMount"></div>
+
+    <!-- Main Shell Body: Left Sidebar + Main Canvas Matching Image 1 -->
+    <div class="app-main-body">
+      <!-- Persistent Left Control Sidebar / Mobile Off-Canvas Drawer -->
+      <div id="sidebarMount"></div>
+
+      <!-- Main Workspace Canvas -->
+      <main id="mainMount" class="main-workspace" role="main"></main>
+    </div>
+
+  </div>
+
+  <!-- N8N Data Payload Modal Mount -->
+  <div id="modalMount"></div>
+
+  <!-- Direct file:// & HTTP Module Support -->
+  <script type="module" src="js/app.js"></script>
+  <!-- Zero-Dependency Workstation Script Fallback (for direct local file:// execution) -->
+  <script src="js/app-bundle.js"></script>
+</body>
+</html>
