@@ -11,7 +11,7 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Open%20MediClin%20Workstation-00798C?style=for-the-badge&logo=google-chrome&logoColor=white)](https://sujalzz88.github.io/MEDICLIN-/)
 
 **Deployed Application URL**: [`https://sujalzz88.github.io/MEDICLIN-/`](https://sujalzz88.github.io/MEDICLIN-/)  
-**Active n8n Gateway**: `https://aryanna.app.n8n.cloud/webhook/a5b3b9e3-267f-406f-a37b-aabeff9b50d0`
+**Active n8n Gateway**: `https://aryanna.app.n8n.cloud/webhook-test/a5b3b9e3-267f-406f-a37b-aabeff9b50d0`
 
 ---
 
@@ -106,7 +106,7 @@ flowchart TD
     end
 
     subgraph Orchestration ["Backend Automation Layer (n8n Cloud)"]
-        C --> D["Webhook Trigger (/webhook/)"]
+        C --> D["Webhook Trigger (/webhook-test/)"]
         D --> E["Validate Input (7 Required Keys)"]
         E --> F["Extract Patient Data & Vitals"]
         F --> G["Calculate Patient Info (UTC Age / Cohort)"]

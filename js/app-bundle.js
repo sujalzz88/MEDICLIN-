@@ -827,8 +827,8 @@
 
   // --- N8N API CLIENT HELPERS (BUNDLE FALLBACK) ---
   var N8N_ENDPOINTS = {
-    test: 'https://aryanna.app.n8n.cloud/webhook/a5b3b9e3-267f-406f-a37b-aabeff9b50d0',
-    production: 'https://aryanna.app.n8n.cloud/webhook/a5b3b9e3-267f-406f-a37b-aabeff9b50d0'
+    test: 'https://aryanna.app.n8n.cloud/webhook-test/a5b3b9e3-267f-406f-a37b-aabeff9b50d0',
+    production: 'https://aryanna.app.n8n.cloud/webhook-test/a5b3b9e3-267f-406f-a37b-aabeff9b50d0'
   };
 
   var N8N_PRODUCTION_WEBHOOK_URL = N8N_ENDPOINTS.production;
