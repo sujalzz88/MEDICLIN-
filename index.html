@@ -46,9 +46,20 @@
   <!-- N8N Data Payload Modal Mount -->
   <div id="modalMount"></div>
 
-  <!-- Direct file:// & HTTP Module Support -->
+  <!-- Modern ES Module Entrypoint (for HTTP / HTTPS / GitHub Pages) -->
   <script type="module" src="js/app.js"></script>
-  <!-- Zero-Dependency Workstation Script Fallback (for direct local file:// execution) -->
-  <script src="js/app-bundle.js"></script>
+
+  <!-- Legacy & Fallback Bundle (for browsers without ES Module support or direct file:// CORS restrictions) -->
+  <script nomodule src="js/app-bundle.js"></script>
+  <script>
+    // Fallback trigger if ES module is blocked by local file:// sandbox
+    window.addEventListener('load', function() {
+      if (!window.__mediclinAppInitialized) {
+        var s = document.createElement('script');
+        s.src = 'js/app-bundle.js';
+        document.body.appendChild(s);
+      }
+    });
+  </script>
 </body>
 </html>
