@@ -1,3 +1,4 @@
+import { renderN8nModal } from './components/n8n-workflow-modal.js';
 /* ==========================================================================
    MAIN APPLICATION ENTRY POINT (APP.JS) — MEDICLIN WORKSTATION
    Routing, State Subscriptions, Sidebar & Navigation Controller
@@ -20,6 +21,7 @@ function initApp() {
   const headerMount = document.getElementById('headerMount');
   const sidebarMount = document.getElementById('sidebarMount');
   const mainMount = document.getElementById('mainMount');
+  const modalMount = document.getElementById('modalMount');
 
   if (!headerMount || !mainMount) return;
 
@@ -32,6 +34,7 @@ function initApp() {
 
   try {
     if (sidebarMount) renderSidebar(sidebarMount);
+  if (modalMount) renderN8nModal(modalMount);
   } catch (e) {
     console.error('[MediClin] Sidebar error:', e);
   }
