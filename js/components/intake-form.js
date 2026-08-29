@@ -32,9 +32,7 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
           <div class="neu-acuity-badge routine" style="font-size:0.75rem; padding:0.35rem 0.85rem;" title="Target Endpoint: ${currentEndpoint}">
             <span class="led-dot routine"></span> ${isTestEndpoint ? 'N8N TEST MODE' : 'N8N PRODUCTION READY'}
           </div>
-          <button type="button" id="openN8nConfigQuickBtn" class="neu-btn" style="font-size:0.72rem; padding:0.3rem 0.65rem;" title="Configure n8n Webhook Endpoint">
-            ⚙️ Gateway
-          </button>
+          
         </div>
       </div>
 

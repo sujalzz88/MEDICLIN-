@@ -51,7 +51,7 @@ export const INITIAL_PRESETS = {
 
 class AppState {
   constructor() {
-    this.currentRoute = 'HOME'; // HOME, EMERGENCY, URGENT, CONTACT US, ABOUT US
+    this.currentRoute = 'HOME'; // HOME, EMERGENCY, URGENT, ROUTINE PLANNING, ABOUT US
     this.intakes = [];
     this.activeIntake = null; // Only show assessment after user processes intake
     this.listeners = [];
@@ -68,12 +68,15 @@ class AppState {
     } catch (e) {}
     if (stored) {
       try {
-        this.intakes = JSON.parse(stored);
-        this.intakes.forEach(item => {
-          if (item && item.patient) {
-            item.triage = evaluateTriage(item.patient);
-          }
-        });
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          this.intakes = parsed.filter(Boolean).map(item => {
+            if (item && item.patient && !item.triage) {
+              item.triage = evaluateTriage(item.patient);
+            }
+            return item;
+          });
+        }
       } catch (e) {
         this.intakes = [];
       }
@@ -90,6 +93,10 @@ class AppState {
   }
 
   addIntake(intakeWithTriage) {
+    if (!intakeWithTriage) return;
+    if (!intakeWithTriage.triage && intakeWithTriage.patient) {
+      intakeWithTriage.triage = evaluateTriage(intakeWithTriage.patient);
+    }
     this.intakes.unshift(intakeWithTriage);
     this.activeIntake = intakeWithTriage;
     this.saveIntakes();
@@ -97,7 +104,9 @@ class AppState {
 
   setRoute(route) {
     this.currentRoute = route;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
     this.notify();
   }
 
@@ -109,19 +118,28 @@ class AppState {
   }
 
   notify() {
-    this.listeners.forEach(listener => listener(this));
+    this.listeners.forEach(listener => {
+      try {
+        listener(this);
+      } catch (e) {
+        console.error('[MediClin State] Listener error:', e);
+      }
+    });
   }
 
   getEmergencyQueue() {
-    return this.intakes.filter(i => i.triage.urgency_level === 'emergency');
+    if (!Array.isArray(this.intakes)) return [];
+    return this.intakes.filter(i => i && i.triage && (i.triage.urgency_level === 'emergency' || (i.triage.urgency_level || '').toLowerCase().includes('emerg')));
   }
 
   getUrgentQueue() {
-    return this.intakes.filter(i => i.triage.urgency_level === 'urgent');
+    if (!Array.isArray(this.intakes)) return [];
+    return this.intakes.filter(i => i && i.triage && (i.triage.urgency_level === 'urgent' || (i.triage.urgency_level || '').toLowerCase().includes('urg')));
   }
 
   getRoutineQueue() {
-    return this.intakes.filter(i => i.triage.urgency_level === 'routine' || i.triage.urgency_level === 'non_urgent');
+    if (!Array.isArray(this.intakes)) return [];
+    return this.intakes.filter(i => i && i.triage && (i.triage.urgency_level === 'routine' || i.triage.urgency_level === 'non_urgent' || (i.triage.urgency_level || '').toLowerCase().includes('rout')));
   }
 }
 

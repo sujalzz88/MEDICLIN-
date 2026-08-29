@@ -14,7 +14,9 @@ import { renderAutomationWorkflow } from '../components/automation-workflow.js';
 import { state } from '../state.js';
 
 export function renderHomeView(containerEl) {
-  const isEvaluated = !!state.activeIntake;
+  if (!containerEl) return;
+
+  const isEvaluated = Boolean(state.activeIntake && state.activeIntake.triage);
 
   const html = `
     <div style="display:flex; flex-direction:column; gap:1.35rem;">
@@ -55,28 +57,38 @@ export function renderHomeView(containerEl) {
   const workflowMount = containerEl.querySelector('#automationWorkflowMount');
   const briefMount = containerEl.querySelector('#providerBriefMount');
 
-  // Render Stepper (Step 1 active initially, Step 2-5 active upon triage)
-  renderWorkflowStepper(stepperMount, isEvaluated ? 2 : 1);
-
-  // If already evaluated, populate rows 2, 2.5, and 3
-  if (isEvaluated) {
-    renderPatientStatusOverview(statusMount, state.activeIntake);
-    renderPatientAlerts(alertsMount, state.activeIntake);
-    renderAutomationWorkflow(workflowMount, state.activeIntake);
-    renderProviderBrief(briefMount, state.activeIntake);
+  // 1. Render Stepper
+  try {
+    if (stepperMount) renderWorkflowStepper(stepperMount, isEvaluated ? 2 : 1);
+  } catch (e) {
+    console.error('[MediClin] Stepper render error:', e);
   }
 
-  // Mount Intake Form in Row 1
-  renderIntakeForm(formMount, (newRecord) => {
-    // Reveal Assessment Container
-    assessSection.style.display = 'flex';
-    renderWorkflowStepper(stepperMount, 2);
-    renderPatientStatusOverview(statusMount, newRecord);
-    renderPatientAlerts(alertsMount, newRecord);
-    renderAutomationWorkflow(workflowMount, newRecord);
-    renderProviderBrief(briefMount, newRecord);
+  // 2. Render Intake Form in Row 1 (Always rendered first for safety)
+  try {
+    if (formMount) {
+      renderIntakeForm(formMount, (newRecord) => {
+        if (assessSection) assessSection.style.display = 'flex';
+        try { if (stepperMount) renderWorkflowStepper(stepperMount, 2); } catch (e) {}
+        try { if (statusMount) renderPatientStatusOverview(statusMount, newRecord); } catch (e) {}
+        try { if (alertsMount) renderPatientAlerts(alertsMount, newRecord); } catch (e) {}
+        try { if (workflowMount) renderAutomationWorkflow(workflowMount, newRecord); } catch (e) {}
+        try { if (briefMount) renderProviderBrief(briefMount, newRecord); } catch (e) {}
 
-    // Smooth scroll down to assessment results in Row 2
-    assessSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
+        if (assessSection) {
+          assessSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[MediClin] Intake form render error:', e);
+  }
+
+  // 3. If already evaluated, populate rows 2, 2.5, and 3
+  if (isEvaluated && state.activeIntake) {
+    try { if (statusMount) renderPatientStatusOverview(statusMount, state.activeIntake); } catch (e) { console.error(e); }
+    try { if (alertsMount) renderPatientAlerts(alertsMount, state.activeIntake); } catch (e) { console.error(e); }
+    try { if (workflowMount) renderAutomationWorkflow(workflowMount, state.activeIntake); } catch (e) { console.error(e); }
+    try { if (briefMount) renderProviderBrief(briefMount, state.activeIntake); } catch (e) { console.error(e); }
+  }
 }

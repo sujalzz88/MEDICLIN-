@@ -152,7 +152,7 @@ export function renderPatientAlerts(containerEl, record) {
                 Red Flag Clinical Alert Detected
               </div>
               <ul class="red-flag-clean-list">
-                ${triage.red_flag_symptoms.map(rf => `<li><strong>${rf}</strong></li>`).join('')}
+                ${(triage.red_flag_symptoms || []).map(rf => `<li><strong>${rf}</strong></li>`).join('')}
               </ul>
             </div>
           ` : `
@@ -217,21 +217,21 @@ export function renderPatientAlerts(containerEl, record) {
         <div class="protocol-box">
           <div class="protocol-clean-header">🩺 Required Exams</div>
           <ul class="protocol-clean-items">
-            ${triage.exams_needed.map(item => `<li>${item}</li>`).join('')}
+            ${(triage.exams_needed || []).map(item => `<li>${item}</li>`).join('')}
           </ul>
         </div>
 
         <div class="protocol-box">
           <div class="protocol-clean-header">🧪 Diagnostic Orders</div>
           <ul class="protocol-clean-items">
-            ${triage.tests_to_consider.map(item => `<li>${item}</li>`).join('')}
+            ${(triage.tests_to_consider || []).map(item => `<li>${item}</li>`).join('')}
           </ul>
         </div>
 
         <div class="protocol-box">
           <div class="protocol-clean-header">❓ Clinician Questions</div>
           <ul class="protocol-clean-items">
-            ${triage.questions_for_provider.map(item => `<li>${item}</li>`).join('')}
+            ${(triage.questions_for_provider || []).map(item => `<li>${item}</li>`).join('')}
           </ul>
         </div>
       </div>

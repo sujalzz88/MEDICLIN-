@@ -68,7 +68,7 @@ export function renderProviderBrief(containerEl, record) {
           <span class="brief-cell-label" style="font-size:0.72rem;">A — Assessment</span>
           <div class="brief-cell-val" style="font-size:0.82rem; margin-top:0.35rem;">
             <strong>${triage.urgency_level.toUpperCase()}</strong> (${triage.esi_level || 'Score ' + triage.priority_score})<br/>
-            <span style="color:var(--text-sub); font-size:0.78rem;">${triage.possible_conditions.slice(0, 2).join(' • ')}</span>
+            <span style="color:var(--text-sub); font-size:0.78rem;">${(triage.possible_conditions || []).slice(0, 2).join(' • ') || 'Clinical investigation recommended'}</span>
           </div>
         </div>
 
@@ -78,7 +78,7 @@ export function renderProviderBrief(containerEl, record) {
           <div class="brief-cell-val" style="font-size:0.82rem; margin-top:0.35rem;">
             <strong>Provider:</strong> ${triage.recommended_provider}<br/>
             <strong>Window:</strong> <span style="color:var(--routine-green); font-weight:700;">${triage.appointment_duration}</span><br/>
-            <strong>Required Orders:</strong> ${triage.exams_needed.slice(0, 2).join(' • ')}
+            <strong>Required Orders:</strong> ${(triage.exams_needed || []).slice(0, 2).join(' • ') || 'Standard clinical examination'}
           </div>
         </div>
 
