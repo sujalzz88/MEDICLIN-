@@ -6,7 +6,24 @@
         "httpMethod": "POST",
         "path": "a5b3b9e3-267f-406f-a37b-aabeff9b50d0",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Accept, Authorization, X-Requested-With"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS, GET"
+              }
+            ]
+          }
+        }
       },
       "id": "444458b6-4b68-45ad-be00-d85f8e6573c0",
       "name": "Webhook",
@@ -118,7 +135,23 @@
       "parameters": {
         "respondWith": "allIncomingItems",
         "options": {
-          "responseCode": 200
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Accept, Authorization, X-Requested-With"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS, GET"
+              }
+            ]
+          }
         }
       },
       "id": "ff830b05-59b4-4b53-bfa5-ca4c3b65287f",
@@ -387,7 +420,144 @@
         "fieldsUi": {
           "fieldValues": [
             {
-              "fieldId": "submission_id"
+              "fieldId": "intake_id",
+              "fieldValue": "={{ $json.intake_id }}"
+            },
+            {
+              "fieldId": "submission_id",
+              "fieldValue": "={{ $json.submission_id }}"
+            },
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{ $json.patient_name }}"
+            },
+            {
+              "fieldId": "patient_email",
+              "fieldValue": "={{ $json.patient_email }}"
+            },
+            {
+              "fieldId": "patient_phone",
+              "fieldValue": "={{ $json.patient_phone }}"
+            },
+            {
+              "fieldId": "date_of_birth",
+              "fieldValue": "={{ $json.date_of_birth }}"
+            },
+            {
+              "fieldId": "patient_age",
+              "fieldValue": "={{ $json.patient_age }}"
+            },
+            {
+              "fieldId": "patient_category",
+              "fieldValue": "={{ $json.patient_category }}"
+            },
+            {
+              "fieldId": "reason_for_visit",
+              "fieldValue": "={{ $json.reason_for_visit }}"
+            },
+            {
+              "fieldId": "symptoms",
+              "fieldValue": "={{ $json.symptoms }}"
+            },
+            {
+              "fieldId": "symptom_duration",
+              "fieldValue": "={{ $json.symptom_duration }}"
+            },
+            {
+              "fieldId": "pain_level",
+              "fieldValue": "={{ $json.pain_level }}"
+            },
+            {
+              "fieldId": "current_medications",
+              "fieldValue": "={{ $json.current_medications }}"
+            },
+            {
+              "fieldId": "allergies",
+              "fieldValue": "={{ $json.allergies }}"
+            },
+            {
+              "fieldId": "medical_history",
+              "fieldValue": "={{ $json.medical_history }}"
+            },
+            {
+              "fieldId": "insurance_provider",
+              "fieldValue": "={{ $json.insurance_provider }}"
+            },
+            {
+              "fieldId": "preferred_date",
+              "fieldValue": "={{ $json.preferred_date }}"
+            },
+            {
+              "fieldId": "preferred_time",
+              "fieldValue": "={{ $json.preferred_time }}"
+            },
+            {
+              "fieldId": "submission_date",
+              "fieldValue": "={{ $json.submission_date }}"
+            },
+            {
+              "fieldId": "urgency_level",
+              "fieldValue": "={{ $json.urgency_level }}"
+            },
+            {
+              "fieldId": "urgency_reasoning",
+              "fieldValue": "={{ $json.urgency_reasoning }}"
+            },
+            {
+              "fieldId": "priority_score",
+              "fieldValue": "={{ $json.priority_score }}"
+            },
+            {
+              "fieldId": "symptom_summary",
+              "fieldValue": "={{ $json.symptom_summary }}"
+            },
+            {
+              "fieldId": "red_flag_symptoms",
+              "fieldValue": "={{ $json.red_flag_symptoms }}"
+            },
+            {
+              "fieldId": "possible_conditions",
+              "fieldValue": "={{ $json.possible_conditions }}"
+            },
+            {
+              "fieldId": "critical_alerts",
+              "fieldValue": "={{ $json.critical_alerts }}"
+            },
+            {
+              "fieldId": "recommended_provider",
+              "fieldValue": "={{ $json.recommended_provider }}"
+            },
+            {
+              "fieldId": "recommended_specialty",
+              "fieldValue": "={{ $json.recommended_specialty }}"
+            },
+            {
+              "fieldId": "questions_for_provider",
+              "fieldValue": "={{ $json.questions_for_provider }}"
+            },
+            {
+              "fieldId": "exams_needed",
+              "fieldValue": "={{ $json.exams_needed }}"
+            },
+            {
+              "fieldId": "tests_to_consider",
+              "fieldValue": "={{ $json.tests_to_consider }}"
+            },
+            {
+              "fieldId": "patient_instructions",
+              "fieldValue": "={{ $json.patient_instructions }}"
+            },
+            {
+              "fieldId": "items_to_bring",
+              "fieldValue": "={{ $json.items_to_bring }}"
+            },
+            {
+              "fieldId": "appointment_duration",
+              "fieldValue": "={{ $json.appointment_duration }}"
+            },
+            {
+              "fieldId": "detailed_analysis_markdown",
+              "fieldValue": "={{ $json.detailed_analysis_markdown }}"
             }
           ]
         }
@@ -397,9 +567,16 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        540,
-        180
-      ]
+        960,
+        -240
+      ],
+      "continueOnFail": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "NlWoK0AERXioqg2e",
+          "name": "Supabase account"
+        }
+      }
     },
     {
       "parameters": {
@@ -496,6 +673,19 @@
         -464
       ],
       "typeVersion": 1
+    },
+    {
+      "id": "e4a2b189-9830-4b2e-a10c-99d8213600f1",
+      "name": "Prepare Supabase Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        -240
+      ],
+      "parameters": {
+        "jsCode": "// Construct complete normalized Supabase record from AI triage + Patient intake\nconst aiItem = $input.first().json;\nlet triage = aiItem.output || aiItem.triage || aiItem;\nif (typeof triage === 'string') {\n  try { triage = JSON.parse(triage); } catch(e) { triage = {}; }\n}\n\nlet patient = {};\ntry {\n  patient = $('Calculate Patient Info').first().json || {};\n} catch(e) {\n  try {\n    patient = $('Extract Patient Data').first().json || {};\n  } catch(e2) {\n    patient = aiItem.patient || {};\n  }\n}\n\nfunction ensureArray(val) {\n  if (Array.isArray(val)) return val;\n  if (!val) return [];\n  if (typeof val === 'string') {\n    try {\n      const parsed = JSON.parse(val);\n      if (Array.isArray(parsed)) return parsed;\n    } catch(e) {}\n    return [val];\n  }\n  return [val];\n}\n\nfunction ensureInt(val, fallback) {\n  const n = parseInt(val, 10);\n  return isNaN(n) ? (fallback || 0) : n;\n}\n\nconst submissionId = String(patient.submission_id || patient.submissionID || ('SUB-' + Date.now()));\nconst intakeId = patient.intake_id || ('MED-' + submissionId);\n\nconst record = {\n  intake_id: intakeId,\n  submission_id: submissionId,\n  patient_name: patient.patient_name || 'Anonymous Patient',\n  patient_email: patient.patient_email || 'patient@example.com',\n  patient_phone: patient.patient_phone || 'N/A',\n  date_of_birth: patient.date_of_birth || '1990-01-01',\n  patient_age: ensureInt(patient.patient_age, 35),\n  patient_category: patient.patient_category || 'Adult (18-64)',\n  reason_for_visit: patient.reason_for_visit || 'Medical consultation',\n  symptoms: patient.symptoms || 'No symptoms provided',\n  symptom_duration: patient.symptom_duration || 'Not specified',\n  pain_level: ensureInt(patient.pain_level, 0),\n  current_medications: patient.current_medications || 'None',\n  allergies: patient.allergies || 'None',\n  medical_history: patient.medical_history || 'None',\n  insurance_provider: patient.insurance_provider || 'Self-pay',\n  preferred_date: patient.preferred_date || new Date().toISOString().split('T')[0],\n  preferred_time: patient.preferred_time || '10:00',\n  submission_date: patient.submission_date || new Date().toISOString(),\n\n  // AI Triage Assessment\n  urgency_level: (triage.urgency_level || 'routine').toLowerCase().trim(),\n  urgency_reasoning: triage.urgency_reasoning || 'AI triage assessment completed.',\n  priority_score: ensureInt(triage.priority_score, 30),\n  symptom_summary: triage.symptom_summary || patient.symptoms || '',\n  red_flag_symptoms: ensureArray(triage.red_flag_symptoms),\n  possible_conditions: ensureArray(triage.possible_conditions),\n  critical_alerts: ensureArray(triage.critical_alerts),\n  recommended_provider: triage.recommended_provider || 'Attending Physician',\n  recommended_specialty: triage.recommended_specialty || 'General Medicine',\n  questions_for_provider: ensureArray(triage.questions_for_provider),\n  exams_needed: ensureArray(triage.exams_needed),\n  tests_to_consider: ensureArray(triage.tests_to_consider),\n  patient_instructions: ensureArray(triage.patient_instructions),\n  items_to_bring: ensureArray(triage.items_to_bring),\n  appointment_duration: triage.appointment_duration || '30 minutes',\n  detailed_analysis_markdown: triage.detailed_analysis_markdown || ''\n};\n\nreturn [{ json: record }];"
+      }
     }
   ],
   "connections": {
@@ -570,6 +760,11 @@
         [
           {
             "node": "Prepare Frontend Response",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Supabase Record",
             "type": "main",
             "index": 0
           },
@@ -705,7 +900,7 @@
         ]
       ]
     },
-    "Log to Patient Database": {
+    "Prepare Supabase Record": {
       "main": [
         [
           {
