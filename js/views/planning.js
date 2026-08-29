@@ -1,3 +1,4 @@
+import { saveIntakeToSupabase } from '../api/supabase-client.js';
 /* ==========================================================================
    ROUTINE & UNIVERSAL PLANNING WORKSPACE (PLANNING.JS) — MEDICLIN
    Universal Planning & Scheduling Workspace for Emergency, Urgent & Routine

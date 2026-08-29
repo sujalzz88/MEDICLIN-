@@ -1158,6 +1158,86 @@
     });
   }
 
+  
+  // --- SUPABASE DIRECT DATA PERSISTENCE CLIENT ---
+  var SUPABASE_URL = 'https://dolmvvtlihbhafzfmyhm.supabase.co';
+  var SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_JTWSmDCBhDyWin312J8xig_lStVYaZ-';
+  var SUPABASE_TABLE = 'patient_intakes';
+
+  function saveIntakeToSupabase(rawFormData, triageData) {
+    if (!rawFormData || typeof rawFormData !== 'object') {
+      return Promise.resolve({ success: false, error: 'Invalid form data' });
+    }
+
+    var patientName = '';
+    if (typeof rawFormData.patient_name === 'string') {
+      patientName = rawFormData.patient_name.trim();
+    } else if (rawFormData.q3_fullName) {
+      if (typeof rawFormData.q3_fullName === 'object') {
+        patientName = (rawFormData.q3_fullName.first || '') + ' ' + (rawFormData.q3_fullName.last || '');
+      } else {
+        patientName = String(rawFormData.q3_fullName);
+      }
+    }
+
+    var submissionId = String(
+      rawFormData.submission_id ||
+      rawFormData.submissionID ||
+      rawFormData.intake_id ||
+      ('SUB-' + Math.floor(100000 + Math.random() * 900000))
+    );
+
+    var dob = rawFormData.date_of_birth || rawFormData.q6_dateOfBirth || '1958-04-12';
+    var ageObj = calculatePatientAgeAndCategory(dob);
+    var painLevel = parseInt(rawFormData.pain_level || rawFormData.q10_painLevel || 0, 10);
+
+    var rowPayload = {
+      submission_id: submissionId,
+      patient_name: patientName || 'Anonymous Patient',
+      patient_email: rawFormData.patient_email || rawFormData.q4_email || null,
+      patient_phone: rawFormData.patient_phone || rawFormData.q5_phone || null,
+      date_of_birth: dob,
+      patient_age: ageObj.age,
+      patient_category: ageObj.category,
+      reason_for_visit: rawFormData.reason_for_visit || rawFormData.q7_reasonForVisit || 'Medical Consultation',
+      symptoms: rawFormData.symptoms || rawFormData.q8_symptoms || 'None documented',
+      symptom_duration: rawFormData.symptom_duration || rawFormData.q9_duration || null,
+      pain_level: isNaN(painLevel) ? 0 : painLevel,
+      urgency_level: (triageData && triageData.urgency_level) ? triageData.urgency_level : (rawFormData.workflowType || 'routine'),
+      priority_score: (triageData && triageData.priority_score) ? triageData.priority_score : 35,
+      red_flag_symptoms: (triageData && Array.isArray(triageData.red_flag_symptoms)) ? triageData.red_flag_symptoms : [],
+      critical_alerts: (triageData && Array.isArray(triageData.critical_alerts)) ? triageData.critical_alerts : [],
+      raw_payload: rawFormData
+    };
+
+    console.info('[MediClin] Supabase insert started (Table: ' + SUPABASE_TABLE + ')');
+
+    return fetch(SUPABASE_URL + '/rest/v1/' + SUPABASE_TABLE, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_PUBLISHABLE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(rowPayload)
+    }).then(function (res) {
+      if (!res.ok) {
+        return res.text().then(function (errText) {
+          console.warn('[MediClin] Supabase insert failed: ' + res.status);
+          return { success: false, status: res.status, submissionId: submissionId, error: errText };
+        });
+      }
+      return res.json().then(function (data) {
+        console.info('[MediClin] Supabase insert successful (HTTP 201 Created)');
+        return { success: true, status: res.status, submissionId: submissionId, data: data };
+      });
+    }).catch(function (err) {
+      console.warn('[MediClin] Supabase network notice: ' + err.message);
+      return { success: false, status: 0, submissionId: submissionId, error: err.message };
+    });
+  }
+
   // --- 5. PATIENT INTAKE FORM COMPONENT ---
   function renderIntakeForm(containerEl, onSubmitCallback) {
     var currentEndpoint = getActiveWebhookUrl();
@@ -1338,6 +1418,10 @@
       submitBtnIcon.textContent = '⏳';
       submitBtnText.textContent = 'TRANSMITTING TO N8N AI TRIAGE...';
       showLoading('Transmitting payload to n8n webhook and running AI medical triage pipeline...');
+
+      saveIntakeToSupabase(intakeData).then(function(dbRes) {
+        if (dbRes.success) console.info('[MediClin Bundle] Supabase persistence confirmed (ID: ' + dbRes.submissionId + ')');
+      }).catch(function(e) { console.warn(e); });
 
       submitToN8n(intakeData).then(function (result) {
         if (result.success && result.normalized && result.normalized.triage) {

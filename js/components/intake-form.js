@@ -1,3 +1,4 @@
+import { saveIntakeToSupabase } from '../api/supabase-client.js';
 /* ==========================================================================
    PATIENT INTAKE FORM COMPONENT (INTAKE-FORM.JS)
    14 Structured Clinical Fields
@@ -360,6 +361,18 @@ export function renderIntakeForm(containerEl, onSubmitCallback) {
     if (submitBtnText) submitBtnText.textContent = 'TRANSMITTING TO N8N AI TRIAGE...';
     showLoading('Transmitting clinical payload to n8n webhook and running AI medical triage pipeline...');
 
+    // Step 1: Direct Supabase Data Persistence (Separate & Independent from n8n)
+    saveIntakeToSupabase(intakeData).then(dbRes => {
+      if (dbRes.success) {
+        console.info('[MediClin] Direct Supabase persistence confirmed (ID: ' + dbRes.submissionId + ')');
+      } else {
+        console.warn('[MediClin] Supabase persistence notice:', dbRes.error);
+      }
+    }).catch(dbErr => {
+      console.warn('[MediClin] Supabase error:', dbErr.message);
+    });
+
+    // Step 2: n8n AI Medical Triage & Workflow Execution
     try {
       const result = await submitToN8n(intakeData);
 
