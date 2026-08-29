@@ -370,3 +370,4 @@ Open your browser at `http://localhost:8080`.
 <div align="center">
   <sub>Built for high-precision clinical workflow automation. Designed with ❤️ for healthcare heroes.</sub>
 </div>
+<img width="1600" height="716" alt="image" src="https://github.com/user-attachments/assets/4b078904-a686-4b7c-8095-827c264a39ff" />
